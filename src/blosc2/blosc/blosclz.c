@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -14,12 +14,14 @@
 **********************************************************************/
 
 
-#include <stdio.h>
-#include <stdbool.h>
 #include "blosclz.h"
 #include "fastcopy.h"
 #include "blosc2/blosc2-common.h"
 
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
 
 /*
  * Give hints to the compiler for branch prediction optimization.
@@ -427,14 +429,15 @@ int blosclz_compress(const int clevel, const void* input, int length,
    * It looks like 4 is more useful in combination with bitshuffle and small typesizes
    * Fallback to 4 because it provides more consistent results for large cratios.
    * UPDATE: new experiments show that using a value of 3 is a bit better, at least for ERA5.
+   * UPDATE 2: go back to 4, as they seem to provide better cratios in general.
    *
    * In this block we also check cratios for the beginning of the buffers and
    * eventually discard those that are small (take too long to decompress).
    * This process is called _entropy probing_.
    */
-  unsigned ipshift = 3;
+  unsigned ipshift = 4;
   // Minimum lengths for encoding (normally it is good to match the shift value)
-  unsigned minlen = 3;
+  unsigned minlen = 4;
 
   uint8_t hashlog_[10] = {0, HASH_LOG - 2, HASH_LOG - 1, HASH_LOG, HASH_LOG,
                           HASH_LOG, HASH_LOG, HASH_LOG, HASH_LOG, HASH_LOG};
@@ -445,7 +448,10 @@ int blosclz_compress(const int clevel, const void* input, int length,
   // is better (specially when combined with bitshuffle).
   // The loss in speed for checking the whole buffer is pretty negligible too.
   int maxlen = length;
-  if (clevel < 4) {
+  if (clevel < 2) {
+    maxlen /= 8;
+  }
+  else if (clevel < 4) {
     maxlen /= 4;
   }
   else if (clevel < 7) {

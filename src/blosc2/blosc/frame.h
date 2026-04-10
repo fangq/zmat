@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -11,7 +11,9 @@
 #ifndef BLOSC_FRAME_H
 #define BLOSC_FRAME_H
 
-#include <stdio.h>
+#include "blosc2.h"
+
+#include <stdbool.h>
 #include <stdint.h>
 
 // Different types of frames
@@ -57,6 +59,7 @@ typedef struct {
   uint8_t* cframe;          //!< The in-memory, contiguous frame buffer
   bool avoid_cframe_free;   //!< Whether the cframe can be freed (false) or not (true).
   uint8_t* coffsets;        //!< Pointers to the (compressed, on-disk) chunk offsets
+  bool coffsets_needs_free; //!< Whether the coffsets memory need to be freed or not.
   int64_t len;              //!< The current length of the frame in (compressed) bytes
   int64_t maxlen;           //!< The maximum length of the frame; if 0, there is no maximum
   uint32_t trailer_len;     //!< The current length of the trailer in (compressed) bytes
@@ -122,13 +125,15 @@ int frame_free(blosc2_frame_s *frame);
 blosc2_frame_s* frame_from_file_offset(const char *urlpath, const blosc2_io *io_cb, int64_t offset);
 
 /**
- * @brief Initialize a frame out of a frame buffer.
+ * @brief Initialize a frame out of a contiguous frame buffer.
  *
- * @param buffer The buffer for the frame.
+ * @param cframe The buffer for the frame.
  * @param len The length of buffer for the frame.
  * @param copy Whether the frame buffer should be copied internally or not.
  *
- * @return The frame created from the frame buffer.
+ * @return The frame created from the contiguous frame buffer.
+ *
+ * @note The user is responsible to `free` the returned frame.
  */
 blosc2_frame_s* frame_from_cframe(uint8_t *cframe, int64_t len, bool copy);
 
@@ -165,4 +170,4 @@ int frame_update_trailer(blosc2_frame_s* frame, blosc2_schunk* schunk);
 int64_t frame_fill_special(blosc2_frame_s* frame, int64_t nitems, int special_value,
                        int32_t chunksize, blosc2_schunk* schunk);
 
-#endif //BLOSC_FRAME_H
+#endif /* BLOSC_FRAME_H */

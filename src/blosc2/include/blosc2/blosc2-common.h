@@ -1,17 +1,19 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-#ifndef SHUFFLE_COMMON_H
-#define SHUFFLE_COMMON_H
+#ifndef BLOSC_BLOSC2_BLOSC2_COMMON_H
+#define BLOSC_BLOSC2_BLOSC2_COMMON_H
 
 #include "blosc2-export.h"
+
+#include <stdint.h>
 #include <string.h>
 
 // For shutting up stupid compiler warning about some 'unused' variables in GCC
@@ -25,24 +27,10 @@
 // For shutting up compiler warning about unused parameters
 #define BLOSC_UNUSED_PARAM(x) ((void)(x))
 
-/* Import standard integer type definitions */
-#if defined(_WIN32) && !defined(__MINGW32__)
-
-  /* stdint.h only available in VS2010 (VC++ 16.0) and newer */
-  #if defined(_MSC_VER) && _MSC_VER < 1600
-    #include "win32/stdint-windows.h"
-  #else
-    #include <stdint.h>
-  #endif
-
-  /* Use inlined functions for supported systems */
-  #if defined(_MSC_VER) && !defined(__cplusplus)   /* Visual Studio */
-    #define inline __inline  /* Visual C is not C99, but supports some kind of inline */
-  #endif
-
-#else
-  #include <stdint.h>
-#endif  /* _WIN32 */
+/* Use inlined functions for supported systems */
+#if defined(_MSC_VER) && !defined(__cplusplus)   /* Visual Studio */
+  #define inline __inline  /* Visual C is not C99, but supports some kind of inline */
+#endif
 
 
 /* Define the __SSE2__ symbol if compiling with Visual C++ and
@@ -73,7 +61,7 @@
 #undef BLOSC_STRICT_ALIGN
 /* Modern ARM systems (like ARM64) should support unaligned access
    quite efficiently. */
-#elif defined(__ARM_FEATURE_UNALIGNED)   /* ARM, GNU C */
+#elif defined(__ARM_FEATURE_UNALIGNED) && defined(__ARM64_ARCH_8__)
 #undef BLOSC_STRICT_ALIGN
 #elif defined(_ARCH_PPC) || defined(__PPC__)
 /* Modern PowerPC systems (like POWER8) should support unaligned access
@@ -85,8 +73,8 @@
 #if defined(__SSE2__)
   #include <emmintrin.h>
 #endif
-#if defined(__AVX2__)
+#if defined(__AVX2__) || defined(__AVX512F__) || defined (__AVX512BW__)
   #include <immintrin.h>
 #endif
 
-#endif  /* SHUFFLE_COMMON_H */
+#endif  /* BLOSC_BLOSC2_BLOSC2_COMMON_H */

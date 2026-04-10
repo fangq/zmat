@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -12,27 +12,42 @@
  * @brief Blosc2 NDim header file.
  *
  * This file contains Blosc2 NDim public API and the structures needed to use it.
- * @author Blosc Development team <blosc@blosc.org>
+ * @author Blosc Development Team <blosc@blosc.org>
  */
 
-#ifndef B2ND_B2ND_H_
-#define B2ND_B2ND_H_
+#ifndef BLOSC_B2ND_H
+#define BLOSC_B2ND_H
 
-#include <blosc2.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "blosc2/blosc2-export.h"
+#ifdef __cplusplus
+}
+#endif
+
+#include "blosc2.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "blosc2/blosc2-export.h"
 
+#if defined(_MSC_VER)
+#define B2ND_DEPRECATED(msg) __declspec(deprecated(msg))
+#elif defined(__GNUC__) || defined(__clang__)
+#define B2ND_DEPRECATED(msg) __attribute__((deprecated(msg)))
+#else
+#define B2ND_DEPRECATED(msg)
+#endif
 
 /* The version for metalayer format; starts from 0 and it must not exceed 127 */
 #define B2ND_METALAYER_VERSION 0
 
 /* The maximum number of dimensions for b2nd arrays */
-#define B2ND_MAX_DIM 8
+#define B2ND_MAX_DIM 16
 
 /* The maximum number of metalayers for b2nd arrays */
 #define B2ND_MAX_METALAYERS (BLOSC2_MAX_METALAYERS - 1)
@@ -123,7 +138,7 @@ typedef struct {
  * @param chunkshape The chunk shape.
  * @param blockshape The block shape.
  * @param dtype The data type expressed as a string version.
- * @param dtype_format The data type format; default is DTYPE_NUMPY_FORMAT.
+ * @param dtype_format The data type format; DTYPE_NUMPY_FORMAT should be chosen for NumPy compatibility.
  * @param metalayers The memory pointer to the list of the metalayers desired.
  * @param nmetalayers The number of metalayers.
  *
@@ -186,12 +201,25 @@ BLOSC_EXPORT int b2nd_zeros(b2nd_context_t *ctx, b2nd_array_t **array);
 
 
 /**
+ * Create an array, with NaN being used as the default value for
+ * uninitialized portions of the array. Should only be used with type sizes
+ * of either 4 or 8. Other sizes generate an error.
+ *
+ * @param ctx The b2nd context for the new array.
+ * @param array The memory pointer where the array will be created.
+ *
+ * @return An error code.
+ */
+BLOSC_EXPORT int b2nd_nans(b2nd_context_t *ctx, b2nd_array_t **array);
+
+
+/**
  * Create an array, with @p fill_value being used as the default value for
  * uninitialized portions of the array.
  *
  * @param ctx The b2nd context for the new array.
- * @param fill_value Default value for uninitialized portions of the array.
  * @param array The memory pointer where the array will be created.
+ * @param fill_value Default value for uninitialized portions of the array.
  *
  * @return An error code.
  */
@@ -274,6 +302,17 @@ BLOSC_EXPORT int b2nd_open_offset(const char *urlpath, b2nd_array_t **array, int
 BLOSC_EXPORT int b2nd_save(const b2nd_array_t *array, char *urlpath);
 
 /**
+ * @brief Append a b2nd array into a file.
+ *
+ * @param array The array to write.
+ * @param urlpath The path for persistent storage.
+ *
+ * @return If successful, return the offset where @p array has been appended in @p urlpath.
+ * Else, a negative value.
+ */
+BLOSC_EXPORT int64_t b2nd_save_append(const b2nd_array_t *array, const char *urlpath);
+
+/**
  * @brief Create a b2nd array from a C buffer.
  *
  * @param ctx The b2nd context for the new array.
@@ -320,11 +359,12 @@ BLOSC_EXPORT int b2nd_get_slice(b2nd_context_t *ctx, b2nd_array_t **array, const
  b2nd array.
  *
  * @param array The b2nd array.
+ * @param view The memory pointer where the new view will be created.
  * @param index Indexes of the single-dimensional entries to remove.
  *
  * @return An error code
  */
-BLOSC_EXPORT int b2nd_squeeze_index(b2nd_array_t *array, const bool *index);
+BLOSC_EXPORT int b2nd_squeeze_index(b2nd_array_t *array, b2nd_array_t **view, const bool *index);
 
 /**
  * @brief Squeeze a b2nd array
@@ -332,10 +372,24 @@ BLOSC_EXPORT int b2nd_squeeze_index(b2nd_array_t *array, const bool *index);
  * This function remove single-dimensional entries from the shape of a b2nd array.
  *
  * @param array The b2nd array.
+ *  @param view The memory pointer where the new view will be created.
  *
  * @return An error code
  */
-BLOSC_EXPORT int b2nd_squeeze(b2nd_array_t *array);
+BLOSC_EXPORT int b2nd_squeeze(b2nd_array_t *array, b2nd_array_t **view);
+
+/**
+ * @brief Add a newaxis to a b2nd array at location @p axis.
+ *
+ * @param array The b2nd array to be expanded.
+ * @param axis The axes where the new dimensions will be added.
+ * @param view The memory pointer where the new view will be created.
+ * @param final_dims The final number of dimensions. Should be same as the number of elements in @p axis.
+ *
+ * @return An error code.
+ */
+BLOSC_EXPORT int b2nd_expand_dims(const b2nd_array_t *array, b2nd_array_t **view, const bool *axis,
+    const uint8_t final_dims);
 
 /**
  * @brief Get a slice from an array and store it into a C buffer.
@@ -356,10 +410,10 @@ BLOSC_EXPORT int b2nd_get_slice_cbuffer(const b2nd_array_t *array, const int64_t
  * @brief Set a slice in a b2nd array using a C buffer.
  *
  * @param buffer The buffer where the slice data is.
+ * @param buffershape The shape of the buffer.
  * @param buffersize The size (in bytes) of the buffer.
  * @param start The coordinates where the slice will begin.
  * @param stop The coordinates where the slice will end.
- * @param buffershape The shape of the buffer.
  * @param array The b2nd array where the slice will be set
  *
  * @return An error code.
@@ -380,6 +434,30 @@ BLOSC_EXPORT int b2nd_set_slice_cbuffer(const void *buffer, const int64_t *buffe
  *
  */
 BLOSC_EXPORT int b2nd_copy(b2nd_context_t *ctx, const b2nd_array_t *src, b2nd_array_t **array);
+
+/**
+ * @brief Concatenate arrays. The result is stored in a new b2nd array, or an enlarged one.
+ *
+ * @param ctx The b2nd context for the new array.
+ * @param src1 The first array from which data is copied.
+ * @param src2 The second array from which data is copied.
+ * @param axis The axis along which the arrays will be concatenated.
+ * @param copy Whether the data should be copied or not. If false, the @p src1 array
+ *   will be expanded as needed to keep the result.
+ * @param array The memory pointer where the array will be created.  It will have the same
+ *   metalayers of @p src1, except for the b2nd metalayer, which will be updated with the
+ *   new shape.
+ *
+ * @ note The two arrays must have the same shape in all dimensions except the concatenation axis.
+ * Also, the typesize of the two arrays must be the same.
+ *
+ * @return An error code
+ *
+ * @note The ndim and shape in ctx will be overwritten by the src1 ctx.
+ *
+ */
+BLOSC_EXPORT int b2nd_concatenate(b2nd_context_t *ctx, const b2nd_array_t *src1, const b2nd_array_t *src2,
+                                  int8_t axis, bool copy, b2nd_array_t **array);
 
 /**
  * @brief Print metalayer parameters.
@@ -518,81 +596,80 @@ BLOSC_EXPORT int b2nd_serialize_meta(int8_t ndim, const int64_t *shape, const in
  *
  * @return An error code.
  */
-static inline int b2nd_deserialize_meta(
-    const uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_t *shape,
-    int32_t *chunkshape, int32_t *blockshape, char **dtype, int8_t *dtype_format) {
-    const uint8_t *pmeta = smeta;
+BLOSC_EXPORT int b2nd_deserialize_meta(const uint8_t *smeta, int32_t smeta_len, int8_t *ndim, int64_t *shape,
+                                       int32_t *chunkshape, int32_t *blockshape, char **dtype, int8_t *dtype_format);
 
-  // Check that we have an array with 7 entries (version, ndim, shape, chunkshape, blockshape, dtype_format, dtype)
-  pmeta += 1;
+// Utilities for C buffers representing multidimensional arrays
 
-  // version entry
-  // int8_t version = (int8_t)pmeta[0];  // positive fixnum (7-bit positive integer) commented to avoid warning
-  pmeta += 1;
+/**
+ * @brief Copy a slice of a source array into another array. The arrays have
+ * the same number of dimensions (though their shapes may differ), the same
+ * item size, and they are stored as C buffers with contiguous data (any
+ * padding is considered part of the array).
+ *
+ * @param ndim The number of dimensions in both arrays.
+ * @param itemsize The size of the individual data item in both arrays.
+ * @param src The buffer for getting the data from the source array.
+ * @param src_pad_shape The shape of the source array, including padding.
+ * @param src_start The source coordinates where the slice will begin.
+ * @param src_stop The source coordinates where the slice will end.
+ * @param dst The buffer for setting the data into the destination array.
+ * @param dst_pad_shape The shape of the destination array, including padding.
+ * @param dst_start The destination coordinates where the slice will be placed.
+ *
+ * @return An error code.
+ *
+ * @note This is kept for backward compatibility with existing code out there.  New code should use
+ * b2nd_copy_buffer2 instead.
+ *
+ * @note Please make sure that slice boundaries fit within the source and
+ * destination arrays before using this function, as it does not perform these
+ * checks itself.
+ */
+B2ND_DEPRECATED("Use b2nd_copy_buffer2 instead.")
+BLOSC_EXPORT int b2nd_copy_buffer(int8_t ndim,
+                                  uint8_t itemsize,
+                                  const void *src, const int64_t *src_pad_shape,
+                                  const int64_t *src_start, const int64_t *src_stop,
+                                  void *dst, const int64_t *dst_pad_shape,
+                                  const int64_t *dst_start);
 
-  // ndim entry
-  *ndim = (int8_t) pmeta[0];
-  int8_t ndim_aux = *ndim;  // positive fixnum (7-bit positive integer)
-  pmeta += 1;
-
-  // shape entry
-  // Initialize to ones, as required by b2nd
-  for (int i = 0; i < ndim_aux; i++) shape[i] = 1;
-  pmeta += 1;
-  for (int8_t i = 0; i < ndim_aux; i++) {
-    pmeta += 1;
-    swap_store(shape + i, pmeta, sizeof(int64_t));
-    pmeta += sizeof(int64_t);
-  }
-
-  // chunkshape entry
-  // Initialize to ones, as required by b2nd
-  for (int i = 0; i < ndim_aux; i++) chunkshape[i] = 1;
-  pmeta += 1;
-  for (int8_t i = 0; i < ndim_aux; i++) {
-    pmeta += 1;
-    swap_store(chunkshape + i, pmeta, sizeof(int32_t));
-    pmeta += sizeof(int32_t);
-  }
-
-  // blockshape entry
-  // Initialize to ones, as required by b2nd
-  for (int i = 0; i < ndim_aux; i++) blockshape[i] = 1;
-  pmeta += 1;
-  for (int8_t i = 0; i < ndim_aux; i++) {
-    pmeta += 1;
-    swap_store(blockshape + i, pmeta, sizeof(int32_t));
-    pmeta += sizeof(int32_t);
-  }
-
-  // dtype entry
-  if (pmeta - smeta < smeta_len) {
-    // dtype info is here
-    *dtype_format = (int8_t) *(pmeta++);
-    pmeta += 1;
-    int dtype_len;
-    swap_store(&dtype_len, pmeta, sizeof(int32_t));
-    pmeta += sizeof(int32_t);
-    *dtype = (char*)malloc(dtype_len + 1);
-    char* dtype_ = *dtype;
-    memcpy(dtype_, (char*)pmeta, dtype_len);
-    dtype_[dtype_len] = '\0';
-    pmeta += dtype_len;
-  }
-  else {
-    // dtype is mandatory in b2nd metalayer, but this is mainly meant as
-    // a fall-back for deprecated caterva headers
-    *dtype = NULL;
-    *dtype_format = 0;
-  }
-
-  int32_t slen = (int32_t) (pmeta - smeta);
-  return (int)slen;
-}
+/**
+ * @brief Copy a slice of a source array into another array. The arrays have
+ * the same number of dimensions (though their shapes may differ), the same
+ * item size, and they are stored as C buffers with contiguous data (any
+ * padding is considered part of the array).
+ *
+ * @param ndim The number of dimensions in both arrays.
+ * @param itemsize The size of the individual data item in both arrays.
+ * @param src The buffer for getting the data from the source array.
+ * @param src_pad_shape The shape of the source array, including padding.
+ * @param src_start The source coordinates where the slice will begin.
+ * @param src_stop The source coordinates where the slice will end.
+ * @param dst The buffer for setting the data into the destination array.
+ * @param dst_pad_shape The shape of the destination array, including padding.
+ * @param dst_start The destination coordinates where the slice will be placed.
+ *
+ * @return An error code.
+ *
+ * @note This is a version of (now deprecated) b2nd_copy_buffer() that uses
+ * signed 32-bit integers for copying data. This is useful when data is stored
+ * in a buffer that uses itemsizes that are larger than 255 bytes.
+ *
+ * @note Please make sure that slice boundaries fit within the source and
+ * destination arrays before using this function, as it does not perform these
+ * checks itself.
+ */
+BLOSC_EXPORT int b2nd_copy_buffer2(int8_t ndim,
+                                   int32_t itemsize,
+                                   const void *src, const int64_t *src_pad_shape,
+                                   const int64_t *src_start, const int64_t *src_stop,
+                                   void *dst, const int64_t *dst_pad_shape,
+                                   const int64_t *dst_start);
 
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // B2ND_B2ND_H_
+#endif  /* BLOSC_B2ND_H */

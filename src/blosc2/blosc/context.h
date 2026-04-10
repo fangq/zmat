@@ -1,38 +1,37 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-#ifndef CONTEXT_H
-#define CONTEXT_H
+#ifndef BLOSC_CONTEXT_H
+#define BLOSC_CONTEXT_H
 
-#if defined(_WIN32) && !defined(__GNUC__)
-  #include "win32/pthread.h"
-#else
-  #include <pthread.h>
+#include "b2nd.h"
+#include "blosc2.h"
+
+#if defined(HAVE_ZSTD)
+#include "zstd.h"
 #endif
+
+#ifdef HAVE_IPP
+#include <ipps.h>
+#endif
+
+#include <threading.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 /* Have problems using posix barriers when symbol value is 200112L */
 /* Requires more investigation, but this will work for the moment */
 #if defined(_POSIX_BARRIERS) && ( (_POSIX_BARRIERS - 20012L) >= 0 && _POSIX_BARRIERS != 200112L)
 #define BLOSC_POSIX_BARRIERS
 #endif
-
-#include "blosc2.h"
-#include "b2nd.h"
-
-#if defined(HAVE_ZSTD)
-  #include "zstd.h"
-#endif /*  HAVE_ZSTD */
-
-#ifdef HAVE_IPP
-  #include <ipps.h>
-#endif /* HAVE_IPP */
 
 struct blosc2_context_s {
   const uint8_t* src;  /* The source buffer */
@@ -74,8 +73,8 @@ struct blosc2_context_s {
   blosc2_schunk* schunk;  /* Associated super-chunk (if available) */
   struct thread_context* serial_context;  /* Cache for temporaries for serial operation */
   int do_compress;  /* 1 if we are compressing, 0 if decompressing */
-  void *btune;  /* Entry point for BTune persistence between runs */
-  blosc2_btune *udbtune;  /* User-defined BTune parameters */
+  void *tuner_params;  /* Entry point for tuner persistence between runs */
+  int tuner_id;  /* User-defined tuner id */
   void *codec_params; /* User defined parameters for the codec */
   void *filter_params[BLOSC2_MAX_FILTERS]; /* User defined parameters for the filters */
   /* Threading */
@@ -83,17 +82,17 @@ struct blosc2_context_s {
   int16_t new_nthreads;
   int16_t threads_started;
   int16_t end_threads;
-  pthread_t *threads;
+  blosc2_pthread_t *threads;
   struct thread_context *thread_contexts;  /* Only for user-managed threads */
-  pthread_mutex_t count_mutex;
-  pthread_mutex_t nchunk_mutex;
+  blosc2_pthread_mutex_t count_mutex;
+  blosc2_pthread_mutex_t nchunk_mutex;
 #ifdef BLOSC_POSIX_BARRIERS
   pthread_barrier_t barr_init;
   pthread_barrier_t barr_finish;
 #else
   int count_threads;
-  pthread_mutex_t count_threads_mutex;
-  pthread_cond_t count_threads_cv;
+  blosc2_pthread_mutex_t count_threads_mutex;
+  blosc2_pthread_cond_t count_threads_cv;
 #endif
 #if !defined(_WIN32)
   pthread_attr_t ct_attr;  /* creation time attrs for threads */
@@ -101,8 +100,9 @@ struct blosc2_context_s {
   int thread_giveup_code;  /* error code when give up */
   int thread_nblock;  /* block counter */
   int dref_not_init;  /* data ref in delta not initialized */
-  pthread_mutex_t delta_mutex;
-  pthread_cond_t delta_cv;
+  blosc2_pthread_mutex_t delta_mutex;
+  blosc2_pthread_cond_t delta_cv;
+  // Add new fields here to avoid breaking the ABI.
 };
 
 struct b2nd_context_s {
@@ -147,5 +147,4 @@ struct thread_context {
 #endif
 };
 
-
-#endif  /* CONTEXT_H */
+#endif  /* BLOSC_CONTEXT_H */

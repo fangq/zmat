@@ -1,21 +1,25 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc developers <blosc@blosc.org> and Jerome Kieffer <jerome.kieffer@esrf.fr>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org> and Jerome Kieffer <jerome.kieffer@esrf.fr>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-#include "shuffle-generic.h"
 #include "shuffle-altivec.h"
+#include "shuffle-generic.h"
+#include <stdlib.h>
 
 /* Make sure ALTIVEC is available for the compilation target and compiler. */
-#if defined(__ALTIVEC__)
+#if defined(__ALTIVEC__) && defined(__VSX__) && defined(_ARCH_PWR8)
+
+#include "transpose-altivec.h"
 
 #include <altivec.h>
-#include "transpose-altivec.h"
+
+#include <stdint.h>
 
 /* Routine optimized for shuffling a buffer for a type size of 2 bytes. */
 static void
@@ -420,4 +424,20 @@ unshuffle_altivec(const int32_t bytesoftype, const int32_t blocksize,
   }
 }
 
-#endif /* defined(__ALTIVEC__) */
+const bool is_shuffle_altivec = true;
+
+#else /* defined(__ALTIVEC__) && defined(__VSX__) && defined(_ARCH_PWR8) */
+
+const bool is_shuffle_altivec = false;
+
+void shuffle_altivec(const int32_t bytesoftype, const int32_t blocksize,
+                     const uint8_t *_src, uint8_t *_dest) {
+  abort();
+}
+
+void unshuffle_altivec(const int32_t bytesoftype, const int32_t blocksize,
+                       const uint8_t *_src, uint8_t *_dest) {
+  abort();
+}
+
+#endif /* defined(__ALTIVEC__) && defined(__VSX__) && defined(_ARCH_PWR8) */

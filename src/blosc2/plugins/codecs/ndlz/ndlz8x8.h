@@ -1,24 +1,19 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
+#ifndef BLOSC_PLUGINS_CODECS_NDLZ_NDLZ8X8_H
+#define BLOSC_PLUGINS_CODECS_NDLZ_NDLZ8X8_H
 
-
-#ifndef NDLZ8_H
-#define NDLZ8_H
-#include "context.h"
-
-#if defined (__cplusplus)
-extern "C" {
-#endif
-#include "ndlz.h"
 #include "ndlz-private.h"
+#include "ndlz.h"
+#include "blosc2.h"
 
 /**
   Compress a block of data in the input buffer and returns the size of
@@ -58,8 +53,4 @@ int ndlz8_compress(const uint8_t *input, int32_t input_len, uint8_t *output, int
 int ndlz8_decompress(const uint8_t *input, int32_t input_len, uint8_t *output, int32_t output_len,
                      uint8_t meta, blosc2_dparams *dparams);
 
-#if defined (__cplusplus)
-}
-#endif
-
-#endif /* NDLZ8_H */
+#endif /* BLOSC_PLUGINS_CODECS_NDLZ_NDLZ8X8_H */

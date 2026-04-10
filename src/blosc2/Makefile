@@ -13,7 +13,7 @@ all: lib zstd
 lib:
 	-$(MAKE) -C $(BLOSC_SRC) lib
 zstd:
-	-$(MAKE) -C $(ZSTD_SRC) libzstd.a
+	-$(MAKE) -C $(ZSTD_SRC) libzstd.a CPPFLAGS_STATICLIB=-fPIC
 clean:
 	-$(MAKE) -C $(BLOSC_SRC) clean
 	-$(MAKE) -C $(ZSTD_SRC) clean

@@ -1,40 +1,39 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
-
-  Note: Adapted for NEON by Lucian Marc.
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
 /* NEON-accelerated bitshuffle/bitunshuffle routines. */
 
-#ifndef BITSHUFFLE_NEON_H
-#define BITSHUFFLE_NEON_H
+#ifndef BLOSC_BITSHUFFLE_NEON_H
+#define BLOSC_BITSHUFFLE_NEON_H
 
 #include "blosc2/blosc2-common.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+/**
+ * NEON-accelerated bit(un)shuffle routines availability.
+*/
+extern const bool is_bshuf_NEON;
 
 /**
   NEON-accelerated bitshuffle routine.
 */
-BLOSC_NO_EXPORT int64_t bitshuffle_neon(void* _src, void* _dest, const size_t blocksize,
-                                        const size_t bytesoftype, void* tmp_buf);
+BLOSC_NO_EXPORT int64_t bshuf_trans_bit_elem_NEON(const void* in, void* out, const size_t size,
+                                                  const size_t elem_size);
 
 /**
   NEON-accelerated bitunshuffle routine.
 */
-BLOSC_NO_EXPORT int64_t bitunshuffle_neon(void* _src, void* _dest, const size_t blocksize,
-                                          const size_t bytesoftype, void* tmp_buf);
+BLOSC_NO_EXPORT int64_t bshuf_untrans_bit_elem_NEON(const void* in, void* out, const size_t size,
+                                                    const size_t elem_size);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* BITSHUFFLE_NEON_H */
+#endif /* BLOSC_BITSHUFFLE_NEON_H */

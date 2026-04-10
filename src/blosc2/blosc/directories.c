@@ -1,21 +1,27 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-#include <stdio.h>
 #include "blosc2.h"
+
 #include <sys/stat.h>
+#include <errno.h>
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 #if defined(_WIN32) || defined(__MINGW32__)
   #include <windows.h>
   #include <malloc.h>
   #include <io.h>
+  #include <direct.h>   /* <- add this for _rmdir */
 
   int blosc2_remove_dir(const char* dir_path) {
     char* path;
@@ -49,15 +55,20 @@
       sprintf(fname, "%s\\%s", dir_path, cfile.name);
 
       ret = remove(fname);
-      free(fname);
       if (ret < 0) {
         BLOSC_TRACE_ERROR("Could not remove file %s", fname);
         _findclose(file);
         return BLOSC2_ERROR_FAILURE;
       }
+      free(fname);
     }
 
-    rmdir(dir_path);
+    /* remove the directory */
+    if (_rmdir(dir_path) != 0) {
+      BLOSC_TRACE_ERROR("Could not remove directory %s (errno=%d)", dir_path, errno);
+      _findclose(file);
+      return BLOSC2_ERROR_FAILURE;
+    }
     _findclose(file);
     return BLOSC2_ERROR_SUCCESS;
   }
@@ -97,7 +108,12 @@ int blosc2_remove_dir(const char* dir_path) {
   char* fname;
   while ((de = readdir(dr)) != NULL) {
     fname = malloc(strlen(path) + strlen(de->d_name) + 1);
-    sprintf(fname, "%s%s", path, de->d_name);
+    if (path != NULL) {
+      sprintf(fname, "%s%s", path, de->d_name);
+    }
+    else {
+      sprintf(fname, "%s", de->d_name);
+    }
     if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
       free(fname);
       continue;
@@ -126,6 +142,10 @@ int blosc2_remove_urlpath(const char* urlpath){
   if (urlpath != NULL) {
     struct stat statbuf;
     if (stat(urlpath, &statbuf) != 0){
+      if (errno == ENOENT) {
+        // Path does not exist
+        return BLOSC2_ERROR_SUCCESS;
+      }
       BLOSC_TRACE_ERROR("Could not access %s", urlpath);
       return BLOSC2_ERROR_FAILURE;
     }

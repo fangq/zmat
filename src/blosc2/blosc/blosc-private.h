@@ -1,7 +1,7 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
@@ -9,16 +9,15 @@
 **********************************************************************/
 
 
-#ifndef IARRAY_BLOSC_PRIVATE_H
-#define IARRAY_BLOSC_PRIVATE_H
+#ifndef BLOSC_BLOSC_PRIVATE_H
+#define BLOSC_BLOSC_PRIVATE_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "stdbool.h"
-#include "blosc2.h"
 #include "blosc2/blosc2-common.h"
+#include "blosc2.h"
+
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdint.h>
 
 /*********************************************************************
 
@@ -92,7 +91,7 @@ static inline int32_t sw32_(const void* pa) {
 
   bool little_endian = is_little_endian();
   if (little_endian) {
-    idest = *(int32_t *)pa;
+    memcpy(&idest, pa, sizeof(idest));
   }
   else {
 #if defined (__GNUC__)
@@ -117,7 +116,7 @@ static inline void _sw32(void* dest, int32_t a) {
 
   bool little_endian = is_little_endian();
   if (little_endian) {
-    *(int32_t *)dest_ = a;
+    memcpy(dest_, &a, sizeof(a));;
   }
   else {
 #if defined (__GNUC__)
@@ -167,8 +166,146 @@ int register_filter_private(blosc2_filter *filter);
  */
 int register_codec_private(blosc2_codec *codec);
 
-#ifdef __cplusplus
+
+/**
+ * @brief Register a tune in Blosc.
+ *
+ * @param tune The tune to register.
+ *
+ * @return 0 if succeeds. Else a negative code is returned.
+ */
+int register_tuner_private(blosc2_tuner *tuner);
+
+int fill_tuner(blosc2_tuner *tuner);
+
+extern blosc2_tuner g_tuners[256];
+extern int g_ntuners;
+
+
+#if defined(_WIN32)
+#include <windows.h>
+#ifndef PATH_MAX
+#define PATH_MAX MAX_PATH
+#endif
+#define RTLD_LAZY   0x000
+#define popen _popen
+#define pclose _pclose
+
+static struct {
+    long lasterror;
+    const char *err_rutin;
 }
+var = {
+    0,
+    NULL
+};
+
+static inline void *dlopen (const char *filename, int flags) {
+  BLOSC_UNUSED_PARAM(flags);
+  HINSTANCE hInst;
+  hInst = LoadLibrary(filename);
+  if (hInst==NULL) {
+    var.lasterror = GetLastError();
+    var.err_rutin = "dlopen";
+  }
+
+  return hInst;
+}
+
+static inline void *dlsym(void *handle, const char *name) {
+  FARPROC fp;
+  fp = GetProcAddress((HINSTANCE)handle, name);
+  if (!fp) {
+    var.lasterror = GetLastError ();
+    var.err_rutin = "dlsym";
+  }
+  return (void *)(intptr_t)fp;
+}
+
+static inline int dlclose(void *handle) {
+  bool ok = FreeLibrary((HINSTANCE)handle);
+  if (!ok) {
+    var.lasterror = GetLastError();
+    var.err_rutin = "dlclose";
+    return BLOSC2_ERROR_FAILURE;
+  }
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+static inline const char *dlerror (void) {
+  static char errstr [88];
+  if (var.lasterror) {
+      sprintf (errstr, "%s error #%ld", var.err_rutin, var.lasterror);
+      return errstr;
+  } else {
+      return NULL;
+  }
+}
+#else
+#include <dlfcn.h>
 #endif
 
-#endif //IARRAY_BLOSC_PRIVATE_H
+
+static inline int get_libpath(char *plugin_name, char *libpath, char *python_version) {
+  BLOSC_TRACE_INFO("Trying to get plugin path with python%s\n", python_version);
+  char python_cmd[PATH_MAX] = {0};
+  sprintf(python_cmd, "python%s -c \"import blosc2_%s; blosc2_%s.print_libpath()\"", python_version, plugin_name, plugin_name);
+  FILE *fp = popen(python_cmd, "r");
+  if (fp == NULL) {
+    BLOSC_TRACE_ERROR("Could not run python");
+    return BLOSC2_ERROR_FAILURE;
+  }
+  if (fgets(libpath, PATH_MAX, fp) == NULL) {
+    BLOSC_TRACE_ERROR("Could not read python output");
+    pclose(fp);
+    return BLOSC2_ERROR_FAILURE;
+  }
+  pclose(fp);
+
+  return BLOSC2_ERROR_SUCCESS;
+}
+
+static inline void* load_lib(char *plugin_name, char *libpath) {
+    // Attempt to directly load the library by name
+#if defined(_WIN32)
+    // Windows dynamic library (DLL) format
+    snprintf(libpath, PATH_MAX, "blosc2_%s.dll", plugin_name);
+#else
+    // Unix/Linux/Mac OS dynamic library (.so) format
+    snprintf(libpath, PATH_MAX, "libblosc2_%s.so", plugin_name);
+#endif
+    void* loaded_lib = dlopen(libpath, RTLD_LAZY);
+    if (loaded_lib != NULL) {
+        BLOSC_TRACE_INFO("Successfully loaded %s directly\n", libpath);
+        return loaded_lib;
+    } else {
+#if defined(_WIN32)
+        BLOSC_TRACE_INFO("Failed to load %s directly, error: %lu\n", libpath, GetLastError());
+#else
+        BLOSC_TRACE_INFO("Failed to load %s directly, error: %s\n", libpath, dlerror());
+#endif
+    }
+    // If direct loading fails, fallback to using Python to find the library path
+    if (get_libpath(plugin_name, libpath, "") < 0 && get_libpath(plugin_name, libpath, "3") < 0) {
+        BLOSC_TRACE_ERROR("Problems when running python or python3 for getting plugin path");
+        return NULL;
+    }
+
+    if (strlen(libpath) == 0) {
+        BLOSC_TRACE_ERROR("Could not find plugin libpath");
+        return NULL;
+    }
+
+    // Try to load the library again with the path from Python
+    loaded_lib = dlopen(libpath, RTLD_LAZY);
+    if (loaded_lib == NULL) {
+        BLOSC_TRACE_ERROR("Attempt to load plugin in path '%s' failed with error: %s", libpath, dlerror());
+    } else {
+        BLOSC_TRACE_INFO("Successfully loaded library with Python path: %s\n", libpath);
+    }
+
+    return loaded_lib;
+}
+
+
+#endif /* BLOSC_BLOSC_PRIVATE_H */

@@ -1,40 +1,33 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include "blosc2.h"
 #include "frame.h"
 #include "stune.h"
-#include <inttypes.h>
 #include "blosc-private.h"
+#include "blosc2/tuners-registry.h"
+#include "blosc2.h"
 
 #if defined(_WIN32)
-  #include <windows.h>
-  #include <direct.h>
-  #include <malloc.h>
-
-  #define mkdir(D, M) _mkdir(D)
-
-/* stdint.h only available in VS2010 (VC++ 16.0) and newer */
-  #if defined(_MSC_VER) && _MSC_VER < 1600
-    #include "win32/stdint-windows.h"
-  #else
-    #include <stdint.h>
-  #endif
-
+#include <windows.h>
+#include <direct.h>
+#include <malloc.h>
+#define mkdir(D, M) _mkdir(D)
 #endif  /* _WIN32 */
 
+#include <sys/stat.h>
+
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* If C11 is supported, use it's built-in aligned allocation. */
 #if __STDC_VERSION__ >= 201112L
@@ -44,7 +37,7 @@
 
 /* Get the cparams associated with a super-chunk */
 int blosc2_schunk_get_cparams(blosc2_schunk *schunk, blosc2_cparams **cparams) {
-  *cparams = calloc(sizeof(blosc2_cparams), 1);
+  *cparams = calloc(1, sizeof(blosc2_cparams));
   (*cparams)->schunk = schunk;
   for (int i = 0; i < BLOSC2_MAX_FILTERS; i++) {
     (*cparams)->filters[i] = schunk->filters[i];
@@ -68,7 +61,7 @@ int blosc2_schunk_get_cparams(blosc2_schunk *schunk, blosc2_cparams **cparams) {
 
 /* Get the dparams associated with a super-chunk */
 int blosc2_schunk_get_dparams(blosc2_schunk *schunk, blosc2_dparams **dparams) {
-  *dparams = calloc(sizeof(blosc2_dparams), 1);
+  *dparams = calloc(1, sizeof(blosc2_dparams));
   (*dparams)->schunk = schunk;
   if (schunk->dctx == NULL) {
     (*dparams)->nthreads = blosc2_get_nthreads();
@@ -80,7 +73,7 @@ int blosc2_schunk_get_dparams(blosc2_schunk *schunk, blosc2_dparams **dparams) {
 }
 
 
-void update_schunk_properties(struct blosc2_schunk* schunk) {
+int update_schunk_properties(struct blosc2_schunk* schunk) {
   blosc2_cparams* cparams = schunk->storage->cparams;
   blosc2_dparams* dparams = schunk->storage->dparams;
 
@@ -95,13 +88,21 @@ void update_schunk_properties(struct blosc2_schunk* schunk) {
   schunk->typesize = cparams->typesize;
   schunk->blocksize = cparams->blocksize;
   schunk->chunksize = -1;
-
+  schunk->tuner_params = cparams->tuner_params;
+  schunk->tuner_id = cparams->tuner_id;
+  if (cparams->tuner_id == BLOSC_BTUNE) {
+    cparams->use_dict = 0;
+  }
   /* The compression context */
   if (schunk->cctx != NULL) {
     blosc2_free_ctx(schunk->cctx);
   }
   cparams->schunk = schunk;
   schunk->cctx = blosc2_create_cctx(*cparams);
+  if (schunk->cctx == NULL) {
+    BLOSC_TRACE_ERROR("Could not create compression ctx");
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
 
   /* The decompression context */
   if (schunk->dctx != NULL) {
@@ -109,6 +110,12 @@ void update_schunk_properties(struct blosc2_schunk* schunk) {
   }
   dparams->schunk = schunk;
   schunk->dctx = blosc2_create_dctx(*dparams);
+  if (schunk->dctx == NULL) {
+    BLOSC_TRACE_ERROR("Could not create decompression ctx");
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
+
+  return BLOSC2_ERROR_SUCCESS;
 }
 
 
@@ -122,24 +129,24 @@ static bool file_exists (char *filename) {
 blosc2_schunk* blosc2_schunk_new(blosc2_storage *storage) {
   blosc2_schunk* schunk = calloc(1, sizeof(blosc2_schunk));
   schunk->version = 0;     /* pre-first version */
+  schunk->view = false;  /* not a view by default */
 
   // Get the storage with proper defaults
   schunk->storage = get_new_storage(storage, &BLOSC2_CPARAMS_DEFAULTS, &BLOSC2_DPARAMS_DEFAULTS, &BLOSC2_IO_DEFAULTS);
   // Update the (local variable) storage
   storage = schunk->storage;
 
-  schunk->udbtune = malloc(sizeof(blosc2_btune));
-  if (schunk->storage->cparams->udbtune == NULL) {
-    memcpy(schunk->udbtune, &BTUNE_DEFAULTS, sizeof(blosc2_btune));
-  } else {
-    memcpy(schunk->udbtune, schunk->storage->cparams->udbtune, sizeof(blosc2_btune));
+  char* tradeoff = getenv("BTUNE_TRADEOFF");
+  if (tradeoff != NULL) {
+    // If BTUNE_TRADEOFF passed, automatically use btune
+    storage->cparams->tuner_id = BLOSC_BTUNE;
   }
-  schunk->storage->cparams->udbtune = schunk->udbtune;
 
   // ...and update internal properties
-  update_schunk_properties(schunk);
-
-  schunk->cctx->udbtune->btune_init(schunk->udbtune->btune_config, schunk->cctx, schunk->dctx);
+  if (update_schunk_properties(schunk) < 0) {
+    BLOSC_TRACE_ERROR("Error when updating schunk properties");
+    return NULL;
+  }
 
   if (!storage->contiguous && storage->urlpath != NULL){
     char* urlpath;
@@ -247,6 +254,8 @@ blosc2_schunk* blosc2_schunk_copy(blosc2_schunk *schunk, blosc2_storage *storage
     BLOSC_TRACE_ERROR("Can not create a new schunk");
     return NULL;
   }
+  // Set the chunksize for the schunk, as it cannot be derived from storage
+  new_schunk->chunksize = schunk->chunksize;
 
   // Copy metalayers
   for (int nmeta = 0; nmeta < schunk->nmetalayers; ++nmeta) {
@@ -307,16 +316,34 @@ blosc2_schunk* blosc2_schunk_copy(blosc2_schunk *schunk, blosc2_storage *storage
 
 /* Open an existing super-chunk that is on-disk (no copy is made). */
 blosc2_schunk* blosc2_schunk_open_udio(const char* urlpath, const blosc2_io *udio) {
+  return blosc2_schunk_open_offset_udio(urlpath, 0, udio);
+}
+
+blosc2_schunk* blosc2_schunk_open_offset_udio(const char* urlpath, int64_t offset, const blosc2_io *udio) {
   if (urlpath == NULL) {
     BLOSC_TRACE_ERROR("You need to supply a urlpath.");
     return NULL;
   }
 
-  blosc2_frame_s* frame = frame_from_file_offset(urlpath, udio, 0);
+  blosc2_frame_s* frame = frame_from_file_offset(urlpath, udio, offset);
   if (frame == NULL) {
+    blosc2_io_cb *io_cb = blosc2_get_io_cb(udio->id);
+    if (io_cb == NULL) {
+        BLOSC_TRACE_ERROR("Error getting the input/output API");
+        return NULL;
+    }
+    int rc = io_cb->destroy(udio->params);
+    if (rc < 0) {
+      BLOSC_TRACE_ERROR("Cannot destroy the input/output object.");
+    }
     return NULL;
   }
   blosc2_schunk* schunk = frame_to_schunk(frame, false, udio);
+  if (schunk == NULL) {
+    frame_free(frame);
+    BLOSC_TRACE_ERROR("Error converting frame to super-chunk");
+    return NULL;
+  }
 
   // Set the storage with proper defaults
   size_t pathlen = strlen(urlpath);
@@ -331,25 +358,8 @@ blosc2_schunk* blosc2_schunk_open(const char* urlpath) {
   return blosc2_schunk_open_udio(urlpath, &BLOSC2_IO_DEFAULTS);
 }
 
-BLOSC_EXPORT blosc2_schunk* blosc2_schunk_open_offset(const char* urlpath, int64_t offset) {
-  if (urlpath == NULL) {
-    BLOSC_TRACE_ERROR("You need to supply a urlpath.");
-    return NULL;
-  }
-
-  blosc2_frame_s* frame = frame_from_file_offset(urlpath, &BLOSC2_IO_DEFAULTS, offset);
-  if (frame == NULL) {
-    return NULL;
-  }
-  blosc2_schunk* schunk = frame_to_schunk(frame, false, &BLOSC2_IO_DEFAULTS);
-
-  // Set the storage with proper defaults
-  size_t pathlen = strlen(urlpath);
-  schunk->storage->urlpath = malloc(pathlen + 1);
-  strcpy(schunk->storage->urlpath, urlpath);
-  schunk->storage->contiguous = !frame->sframe;
-
-  return schunk;
+blosc2_schunk* blosc2_schunk_open_offset(const char* urlpath, int64_t offset) {
+  return blosc2_schunk_open_offset_udio(urlpath, offset, &BLOSC2_IO_DEFAULTS);
 }
 
 int64_t blosc2_schunk_to_buffer(blosc2_schunk* schunk, uint8_t** dest, bool* needs_free) {
@@ -395,7 +405,8 @@ int64_t frame_to_file(blosc2_frame_s* frame, const char* urlpath) {
     return BLOSC2_ERROR_PLUGIN_IO;
   }
   void* fp = io_cb->open(urlpath, "wb", frame->schunk->storage->io);
-  int64_t nitems = io_cb->write(frame->cframe, frame->len, 1, fp);
+  int64_t io_pos = 0;
+  int64_t nitems = io_cb->write(frame->cframe, frame->len, 1, io_pos, fp);
   io_cb->close(fp);
   return nitems * frame->len;
 }
@@ -409,18 +420,11 @@ int64_t append_frame_to_file(blosc2_frame_s* frame, const char* urlpath) {
         return BLOSC2_ERROR_PLUGIN_IO;
     }
     void* fp = io_cb->open(urlpath, "ab", frame->schunk->storage->io);
-    int64_t offset;
 
-# if (UNIX)
-    offset = io_cb->tell(fp);
-# else
-    io_cb->seek(fp, 0, SEEK_END);
-    offset = io_cb->tell(fp);
-# endif
-
-    io_cb->write(frame->cframe, frame->len, 1, fp);
+    int64_t io_pos = io_cb->size(fp);
+    io_cb->write(frame->cframe, frame->len, 1, io_pos, fp);
     io_cb->close(fp);
-    return offset;
+    return io_pos;
 }
 
 
@@ -488,7 +492,10 @@ int64_t blosc2_schunk_append_file(blosc2_schunk* schunk, const char* urlpath) {
 
 /* Free all memory from a super-chunk. */
 int blosc2_schunk_free(blosc2_schunk *schunk) {
-  if (schunk->data != NULL) {
+  int err = 0;
+
+  // If it is a view, the data belongs to original array and should not be freed
+  if (schunk->data != NULL && !schunk->view) {
     for (int i = 0; i < schunk->nchunks; i++) {
       free(schunk->data[i]);
     }
@@ -515,6 +522,15 @@ int blosc2_schunk_free(blosc2_schunk *schunk) {
   }
 
   if (schunk->storage != NULL) {
+    blosc2_io_cb *io_cb = blosc2_get_io_cb(schunk->storage->io->id);
+    if (io_cb != NULL) {
+      int rc = io_cb->destroy(schunk->storage->io->params);
+      if (rc < 0) {
+        BLOSC_TRACE_ERROR("Could not free the I/O resources.");
+        err = 1;
+      }
+    }
+
     if (schunk->storage->urlpath != NULL) {
       free(schunk->storage->urlpath);
     }
@@ -524,7 +540,8 @@ int blosc2_schunk_free(blosc2_schunk *schunk) {
     free(schunk->storage);
   }
 
-  if (schunk->frame != NULL) {
+  // If it is a view, the frame belongs to original array and should not be freed
+  if (schunk->frame != NULL && !schunk->view) {
     frame_free((blosc2_frame_s *) schunk->frame);
   }
 
@@ -540,12 +557,9 @@ int blosc2_schunk_free(blosc2_schunk *schunk) {
     }
   }
 
-  if (schunk->udbtune != NULL) {
-    free(schunk->udbtune);
-  }
   free(schunk);
 
-  return 0;
+  return err;
 }
 
 
@@ -559,6 +573,7 @@ blosc2_schunk* blosc2_schunk_from_buffer(uint8_t *cframe, int64_t len, bool copy
   char *magic_number = (char *)cframe;
   magic_number += FRAME_HEADER_MAGIC;
   if (strcmp(magic_number, "b2frame\0") != 0) {
+    frame_free(frame);
     return NULL;
   }
   blosc2_schunk* schunk = frame_to_schunk(frame, copy, &BLOSC2_IO_DEFAULTS);
@@ -870,7 +885,7 @@ int64_t blosc2_schunk_update_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_
 
   if (schunk->chunksize != 0 && (chunk_nbytes > schunk->chunksize ||
       (chunk_nbytes < schunk->chunksize && nchunk != schunk->nchunks - 1))) {
-    BLOSC_TRACE_ERROR("Updating chunks that have different lengths in the same schunk "
+    BLOSC_TRACE_ERROR("Updating chunks having different lengths in the same schunk "
                       "is not supported yet (unless it's the last one and smaller):"
                       " %d > %d.", chunk_nbytes, schunk->chunksize);
     return BLOSC2_ERROR_CHUNK_UPDATE;
@@ -1034,7 +1049,7 @@ int64_t blosc2_schunk_delete_chunk(blosc2_schunk *schunk, int64_t nchunk) {
 
 
 /* Append a data buffer to a super-chunk. */
-int64_t blosc2_schunk_append_buffer(blosc2_schunk *schunk, void *src, int32_t nbytes) {
+int64_t blosc2_schunk_append_buffer(blosc2_schunk *schunk, const void *src, int32_t nbytes) {
   uint8_t* chunk = malloc(nbytes + BLOSC2_MAX_OVERHEAD);
   schunk->current_nchunk = schunk->nchunks;
   /* Compress the src buffer using super-chunk context */
@@ -1116,9 +1131,9 @@ int blosc2_schunk_decompress_chunk(blosc2_schunk *schunk, int64_t nchunk,
 */
 int blosc2_schunk_get_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t **chunk, bool *needs_free) {
   if (schunk->dctx->threads_started > 1) {
-    pthread_mutex_lock(&schunk->dctx->nchunk_mutex);
+    blosc2_pthread_mutex_lock(&schunk->dctx->nchunk_mutex);
     schunk->current_nchunk = nchunk;
-    pthread_mutex_unlock(&schunk->dctx->nchunk_mutex);
+    blosc2_pthread_mutex_unlock(&schunk->dctx->nchunk_mutex);
   }
   else {
     schunk->current_nchunk = nchunk;
@@ -1162,9 +1177,9 @@ int blosc2_schunk_get_chunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t **chu
 */
 int blosc2_schunk_get_lazychunk(blosc2_schunk *schunk, int64_t nchunk, uint8_t **chunk, bool *needs_free) {
   if (schunk->dctx->threads_started > 1) {
-    pthread_mutex_lock(&schunk->dctx->nchunk_mutex);
+    blosc2_pthread_mutex_lock(&schunk->dctx->nchunk_mutex);
     schunk->current_nchunk = nchunk;
-    pthread_mutex_unlock(&schunk->dctx->nchunk_mutex);
+    blosc2_pthread_mutex_unlock(&schunk->dctx->nchunk_mutex);
   }
   else {
     schunk->current_nchunk = nchunk;
@@ -1375,6 +1390,30 @@ int blosc2_schunk_set_slice_buffer(blosc2_schunk *schunk, int64_t start, int64_t
   return BLOSC2_ERROR_SUCCESS;
 }
 
+
+int schunk_get_slice_nchunks(blosc2_schunk *schunk, int64_t start, int64_t stop, int64_t **chunks_idx) {
+  BLOSC_ERROR_NULL(schunk, BLOSC2_ERROR_NULL_POINTER);
+  if (schunk->nchunks == 0){  
+    *chunks_idx = NULL;
+    return 0;
+  }
+  int64_t byte_start = start * schunk->typesize;
+  int64_t byte_stop = stop * schunk->typesize;
+  int64_t nchunk_start = byte_start / schunk->chunksize;
+  int64_t nchunk_stop = byte_stop / schunk->chunksize;
+  if (byte_stop % schunk->chunksize != 0) {
+    nchunk_stop++;
+  }
+  int64_t nchunk = nchunk_start;
+  int nchunks = (int)(nchunk_stop - nchunk_start);
+  *chunks_idx = malloc(nchunks * sizeof(int64_t));
+  int64_t *ptr = *chunks_idx;
+  for (int64_t i = 0; i < nchunks; ++i) {
+    ptr[i] = nchunk;
+    nchunk++;
+  }
+  return nchunks;
+}
 
 /* Reorder the chunk offsets of an existing super-chunk. */
 int blosc2_schunk_reorder_offsets(blosc2_schunk *schunk, int64_t *offsets_order) {
@@ -1590,6 +1629,10 @@ int blosc2_vlmeta_add(blosc2_schunk *schunk, const char *name, uint8_t *content,
   } else {
     cctx = blosc2_create_cctx(BLOSC2_CPARAMS_DEFAULTS);
   }
+  if (cctx == NULL) {
+    BLOSC_TRACE_ERROR("Error while creating the compression context");
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
 
   int csize = blosc2_compress_ctx(cctx, content, content_len, content_buf, content_len + BLOSC2_MAX_OVERHEAD);
   if (csize < 0) {
@@ -1631,6 +1674,10 @@ int blosc2_vlmeta_get(blosc2_schunk *schunk, const char *name, uint8_t **content
   *content_len = nbytes;
   *content = malloc((size_t) nbytes);
   blosc2_context *dctx = blosc2_create_dctx(*schunk->storage->dparams);
+  if (dctx == NULL) {
+    BLOSC_TRACE_ERROR("Error while creating the decompression context");
+    return BLOSC2_ERROR_NULL_POINTER;
+  }
   int nbytes_ = blosc2_decompress_ctx(dctx, meta->content, meta->content_len, *content, nbytes);
   blosc2_free_ctx(dctx);
   if (nbytes_ != nbytes) {
@@ -1657,6 +1704,10 @@ int blosc2_vlmeta_update(blosc2_schunk *schunk, const char *name, uint8_t *conte
     cctx = blosc2_create_cctx(*cparams);
   } else {
     cctx = blosc2_create_cctx(BLOSC2_CPARAMS_DEFAULTS);
+  }
+  if (cctx == NULL) {
+    BLOSC_TRACE_ERROR("Error while creating the compression context");
+    return BLOSC2_ERROR_NULL_POINTER;
   }
 
   int csize = blosc2_compress_ctx(cctx, content, content_len, content_buf, content_len + BLOSC2_MAX_OVERHEAD);
@@ -1690,7 +1741,10 @@ int blosc2_vlmeta_delete(blosc2_schunk *schunk, const char *name) {
   for (int i = nvlmetalayer; i < (schunk->nvlmetalayers - 1); i++) {
     schunk->vlmetalayers[i] = schunk->vlmetalayers[i + 1];
   }
+  schunk->vlmetalayers[schunk->nvlmetalayers - 1] = NULL;
+  free(vlmetalayer->name);
   free(vlmetalayer->content);
+  free(vlmetalayer);
   schunk->nvlmetalayers--;
 
   // Propagate to frames

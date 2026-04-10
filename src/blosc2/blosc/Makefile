@@ -23,7 +23,7 @@ DOXY       := doxygen
 DOCDIR     := $(ZMATDIR)/doc
 DOXYCFG=zmat.cfg
 
-INCLUDEDIRS=-I../../lz4 -I../include -I../internal-complibs/zstd
+INCLUDEDIRS=-I../../lz4 -I../include -I../internal-complibs/zstd -I./
 
 ifeq ($(HAVE_ZLIB),miniz)
   HAVE_ZLIB=yes
@@ -64,7 +64,7 @@ EXESUFFIX=.mex*
 
 FILES=blosc2 blosc2-stdio blosclz delta directories fastcopy \
       frame schunk sframe shuffle shuffle-generic bitshuffle-generic \
-      stune timestamp trunc-prec
+      stune timestamp trunc-prec b2nd b2nd_utils
 
 ifneq ($(IS_X86),)
   FILES += bitshuffle-sse2 shuffle-sse2

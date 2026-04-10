@@ -1,21 +1,23 @@
 /*********************************************************************
   Blosc - Blocked Shuffling and Compression Library
 
-  Copyright (C) 2021  The Blosc Developers <blosc@blosc.org>
+  Copyright (c) 2021  Blosc Development Team <blosc@blosc.org>
   https://blosc.org
   License: BSD 3-Clause (see LICENSE.txt)
 
   See LICENSE.txt for details about copyright and rights to use.
 **********************************************************************/
 
-#include "shuffle-generic.h"
 #include "shuffle-sse2.h"
+#include "shuffle-generic.h"
+#include <stdlib.h>
 
 /* Make sure SSE2 is available for the compilation target and compiler. */
 #if defined(__SSE2__)
 
 #include <emmintrin.h>
 
+#include <stdint.h>
 
 /* The next is useful for debugging purposes */
 #if 0
@@ -364,6 +366,78 @@ unshuffle8_sse2(uint8_t* const dest, const uint8_t* const src,
   }
 }
 
+/* Routine optimized for unshuffling a buffer for a type size of 12 bytes. */
+/* Based on the 16-byte implementation */
+static void
+unshuffle12_sse2(uint8_t* const dest, const uint8_t* const src,
+                 const int32_t vectorizable_elements, const int32_t total_elements) {
+  static const int32_t bytesoftype = 12;
+  int32_t i;
+  int j;
+  __m128i xmm1[16], xmm2[16];
+
+  __m128i mask = _mm_set_epi8( 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff);
+
+  for (i = 0; i < vectorizable_elements; i += sizeof(__m128i)) {
+    /* Load 12 elements (192 bytes) into 12 XMM registers. */
+    const uint8_t* const src_for_ith_element = src + i;
+    for (j = 0; j < bytesoftype; j++) {
+      xmm1[j] = _mm_loadu_si128((__m128i*)(src_for_ith_element + (j * total_elements)));
+    }
+    /* Initialize the last 4 registers (64 bytes) to null */
+    for (j = bytesoftype; j < 16; j++) {
+      xmm1[j] = _mm_setzero_si128();
+    }
+    /* Shuffle bytes */
+    for (j = 0; j < 8; j++) {
+      /* Compute the low 32 bytes */
+      xmm2[j] = _mm_unpacklo_epi8(xmm1[j * 2], xmm1[j * 2 + 1]);
+      /* Compute the hi 32 bytes */
+      xmm2[8 + j] = _mm_unpackhi_epi8(xmm1[j * 2], xmm1[j * 2 + 1]);
+    }
+    /* Shuffle 2-byte words */
+    for (j = 0; j < 8; j++) {
+      /* Compute the low 32 bytes */
+      xmm1[j] = _mm_unpacklo_epi16(xmm2[j * 2], xmm2[j * 2 + 1]);
+      /* Compute the hi 32 bytes */
+      xmm1[8 + j] = _mm_unpackhi_epi16(xmm2[j * 2], xmm2[j * 2 + 1]);
+    }
+    /* Shuffle 4-byte dwords */
+    for (j = 0; j < 8; j++) {
+      /* Compute the low 32 bytes */
+      xmm2[j] = _mm_unpacklo_epi32(xmm1[j * 2], xmm1[j * 2 + 1]);
+      /* Compute the hi 32 bytes */
+      xmm2[8 + j] = _mm_unpackhi_epi32(xmm1[j * 2], xmm1[j * 2 + 1]);
+    }
+    /* Shuffle 8-byte qwords */
+    for (j = 0; j < 8; j++) {
+      /* Compute the low 32 bytes */
+      xmm1[j] = _mm_unpacklo_epi64(xmm2[j * 2], xmm2[j * 2 + 1]);
+      /* Compute the hi 32 bytes */
+      xmm1[8 + j] = _mm_unpackhi_epi64(xmm2[j * 2], xmm2[j * 2 + 1]);
+    }
+
+
+    /* Store the result vectors in proper order */
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (0 * 12)), xmm1[0]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (1 * 12)), xmm1[8]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (2 * 12)), xmm1[4]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (3 * 12)), xmm1[12]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (4 * 12)), xmm1[2]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (5 * 12)), xmm1[10]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (6 * 12)), xmm1[6]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (7 * 12)), xmm1[14]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (8 * 12)), xmm1[1]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (9 * 12)), xmm1[9]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (10 * 12)), xmm1[5]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (11 * 12)), xmm1[13]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (12 * 12)), xmm1[3]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (13 * 12)), xmm1[11]);
+    _mm_storeu_si128((__m128i*)(dest + (i * bytesoftype) + (14 * 12)), xmm1[7]);
+    _mm_maskmoveu_si128(xmm1[15], mask, (char *)(dest + (i * bytesoftype) + (15 * 12)));
+  }
+}
+
 /* Routine optimized for unshuffling a buffer for a type size of 16 bytes. */
 static void
 unshuffle16_sse2(uint8_t* const dest, const uint8_t* const src,
@@ -590,6 +664,9 @@ unshuffle_sse2(const int32_t bytesoftype, const int32_t blocksize,
     case 8:
       unshuffle8_sse2(_dest, _src, vectorizable_elements, total_elements);
       break;
+    case 12:
+      unshuffle12_sse2(_dest, _src, vectorizable_elements, total_elements);
+      break;
     case 16:
       unshuffle16_sse2(_dest, _src, vectorizable_elements, total_elements);
       break;
@@ -612,6 +689,22 @@ unshuffle_sse2(const int32_t bytesoftype, const int32_t blocksize,
   if (vectorizable_bytes < blocksize) {
     unshuffle_generic_inline(bytesoftype, vectorizable_bytes, blocksize, _src, _dest);
   }
+}
+
+const bool is_shuffle_sse2 = true;
+
+#else /* defined(__SSE2__) */
+
+const bool is_shuffle_sse2 = false;
+
+void shuffle_sse2(const int32_t bytesoftype, const int32_t blocksize,
+                  const uint8_t *_src, uint8_t *_dest) {
+  abort();
+}
+
+void unshuffle_sse2(const int32_t bytesoftype, const int32_t blocksize,
+                    const uint8_t *_src, uint8_t *_dest) {
+  abort();
 }
 
 #endif /* defined(__SSE2__) */
