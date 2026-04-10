@@ -203,6 +203,8 @@ if use_blosc2:
         "blosc2.c",
         "blosc2-stdio.c",
         "blosclz.c",
+        "b2nd.c",
+        "b2nd_utils.c",
         "delta.c",
         "directories.c",
         "fastcopy.c",
