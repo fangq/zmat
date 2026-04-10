@@ -22,7 +22,7 @@
 #include <ipps.h>
 #endif
 
-#include <threading.h>
+#include "threading.h"
 
 #include <stddef.h>
 #include <stdint.h>
