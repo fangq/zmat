@@ -76,6 +76,9 @@ ifeq ($(findstring CYGWIN,$(PLATFORM)), CYGWIN)
   EXESUFFIX=
   DLLFLAG=
   MEX=cmd /c mex
+  FILES += win32/threading
+else ifneq ($(filter MINGW% MSYS%,$(PLATFORM)),)
+  FILES += win32/threading
 else ifeq ($(findstring Darwin,$(PLATFORM)), Darwin)
 
 else

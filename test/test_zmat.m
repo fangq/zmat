@@ -27,7 +27,7 @@ end
 
 if (isfield(opt, 'status'))
     if (info.status ~= opt.status)
-        warning('Test %s: failed: expected ''%s'', obtained ''%s''', testname, mat2str(expected), mat2str(res));
+        warning('Test %s: failed: expected ''%s'', obtained ''%s''', testname, tostr(expected), tostr(res));
     else
         fprintf(1, 'Testing %s error: ok\n\tstatus:''%d''\n', testname, info.status);
     end
@@ -35,7 +35,7 @@ if (isfield(opt, 'status'))
 end
 
 if (~isequal(res, expected))
-    warning('Test %s: failed: expected ''%s'', obtained ''%s''', testname, mat2str(expected), mat2str(res));
+    warning('Test %s: failed: expected ''%s'', obtained ''%s''', testname, tostr(expected), tostr(res));
 else
     if (ischar(res))
         fprintf(1, 'Testing %s: ok\n\toutput:''%s''\n', testname, res);
@@ -61,5 +61,13 @@ else
         catch
         end
     end
+end
+end
+
+function s = tostr(x)
+if ischar(x)
+    s = x;
+else
+    s = mat2str(x);
 end
 end
