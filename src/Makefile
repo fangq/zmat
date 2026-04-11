@@ -55,8 +55,9 @@ ifeq ($(findstring _NT-,$(PLATFORM)), _NT-)
   EXESUFFIX=
   DLLFLAG=
   MEXLINKLIBS="\$$LINKLIBS"
+  STATICLIBFLAGS=
 else ifeq ($(findstring Darwin,$(PLATFORM)), Darwin)
-
+  STATICLIBFLAGS=-static-libgcc -static-libstdc++
 else
   CPPOPT+=
   CUCCOPT+=-Xcompiler $(OMP)
@@ -64,6 +65,7 @@ else
      CPPOPT +=
      CUCCOPT +=-m64
   endif
+  STATICLIBFLAGS=-static-libgcc -static-libstdc++
 endif
 
 ifneq ($(HAVE_ZLIB),yes)
@@ -153,7 +155,7 @@ dll:   AROUTPUT   :=-o
 
 oct mex: CPPOPT+= $(DLLFLAG)
 oct:   OUTPUT_DIR=..
-oct:   AR= CXXFLAGS='-O3' LDFLAGS='$(MEXLINKOPT)' mkoctfile zmat.cpp
+oct:   AR= CXXFLAGS='-O3' LDFLAGS='$(MEXLINKOPT) $(STATICLIBFLAGS)' mkoctfile zmat.cpp
 oct:   BINARY=zmat.mex
 oct:   ARFLAGS    :=
 oct:   LINKOPT+=--mex $(INCLUDEDIRS) $(LIBZLIB)
@@ -161,7 +163,7 @@ oct:   LINKOPT+=--mex $(INCLUDEDIRS) $(LIBZLIB)
 mex:   CXX=$(MEX)
 mex:   OUTPUTFLAG:=-output
 mex:   AR=$(MEX) zmat.cpp $(INCLUDEDIRS)
-mex:   LINKOPT+=-cxx LINKLIBS="$(MEXLINKLIBS) $(MEXLINKOPT) $(LIBZLIB)" CXXLIBS="\$$CXXLIBS $(MEXLINKOPT) $(LIBZLIB)" -outdir $(ZMATDIR)
+mex:   LINKOPT+=-cxx LINKLIBS="$(MEXLINKLIBS) $(MEXLINKOPT) $(LIBZLIB) $(STATICLIBFLAGS)" CXXLIBS="\$$CXXLIBS $(MEXLINKOPT) $(LIBZLIB) $(STATICLIBFLAGS)" -outdir $(ZMATDIR)
 mex:   ARFLAGS    :=
 mex:   OUTPUT_DIR=..
 

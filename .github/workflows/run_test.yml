@@ -35,10 +35,10 @@ jobs:
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             choco install upx
             which upx
-            curl --retry 3 -kL http://cdimage.debian.org/mirror/gnu.org/gnu/octave/windows/octave-8.3.0-w64-64.7z --output octave_8.3.0.7z
-            7z x octave_8.3.0.7z -ooctave -y
+            curl --retry 3 -kL http://cdimage.debian.org/mirror/gnu.org/gnu/octave/windows/octave-10.3.0-w64-64.7z --output octave_10.3.0.7z
+            7z x octave_10.3.0.7z -ooctave -y
             echo 'C:\msys64\mingw64\bin' >> $GITHUB_PATH
-            echo "$PWD/octave/octave-8.3.0-w64-64/mingw64/bin" >> $GITHUB_PATH
+            echo "$PWD/octave/octave-10.3.0-w64-64/mingw64/bin" >> $GITHUB_PATH
           fi
       - name: Install msys2 libraries (Windows only)
         if: ${{ runner.os == 'Windows' }}
@@ -80,13 +80,13 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
         shell: msys2 {0}
         run: |
-          export PATH="/mingw64/bin":"$PWD/octave/octave-8.3.0-w64-64/mingw64/bin":$PATH
+          export PATH="/mingw64/bin":"$PWD/octave/octave-10.3.0-w64-64/mingw64/bin":$PATH
           which gcc
           gcc -v
-          make -C src oct CC=gcc CXX=g++ USERLINKOPT="-static-libgcc -static-libstdc++ -fstack-protector -L/mingw64/lib -Wl,-Bstatic -lz -lwinpthread -Wl,-Bdynamic -v -s '$PWD/octave/octave-8.3.0-w64-64/mingw64/lib/octave/8.3.0/liboctinterp.dll.a'"
+          make -C src oct CC=gcc CXX=g++ USERLINKOPT="-static-libgcc -static-libstdc++ -fstack-protector -L/mingw64/lib -Wl,-Bstatic -lz -lwinpthread -Wl,-Bdynamic -v -s '$PWD/octave/octave-10.3.0-w64-64/mingw64/lib/octave/10.3.0/liboctinterp.dll.a'"
           objdump -p zipmat.mex | grep "DLL Name:"
           strip zipmat.mex
-          echo "$PWD/octave/octave-8.3.0-w64-64/mingw64/bin" >> $GITHUB_PATH
+          echo "$PWD/octave/octave-10.3.0-w64-64/mingw64/bin" >> $GITHUB_PATH
       - name: Compress octave mex (Windows only)
         if: ${{ runner.os == 'Windows' }}
         run: |
@@ -110,7 +110,7 @@ jobs:
         run: |
           octave-cli --version
           if [ "$RUNNER_OS" == "Windows" ]; then
-              export PATH="$PWD/octave/octave-8.3.0-w64-64/mingw64/bin":$PATH
+              export PATH="$PWD/octave/octave-10.3.0-w64-64/mingw64/bin":$PATH
           fi
           octave-cli --eval "addpath(pwd);cd test;run_zmat_test;cd ../example;demo_zmat_basic;zmat_speedbench"
       - name: Run octave test
