@@ -229,7 +229,11 @@ if use_blosc2:
             if _exists(p):
                 sources.append(p)
 
-    if platform.system() != "Windows":
+    if platform.system() == "Windows":
+        win32_threading = os.path.join(blosc2_dir, "win32", "threading.c")
+        if _exists(win32_threading):
+            sources.append(win32_threading)
+    else:
         if "pthread" not in libraries:
             libraries.append("pthread")
 else:
