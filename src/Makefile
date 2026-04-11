@@ -58,6 +58,7 @@ ifeq ($(findstring _NT-,$(PLATFORM)), _NT-)
   STATICLIBFLAGS=
 else ifeq ($(findstring Darwin,$(PLATFORM)), Darwin)
   STATICLIBFLAGS=
+  DARWIN_OCT_LDFLAGS=-Wl,-undefined,dynamic_lookup
 else
   CPPOPT+=
   CUCCOPT+=-Xcompiler $(OMP)
@@ -155,7 +156,7 @@ dll:   AROUTPUT   :=-o
 
 oct mex: CPPOPT+= $(DLLFLAG)
 oct:   OUTPUT_DIR=..
-oct:   AR= CXXFLAGS='-O3' LDFLAGS='$(MEXLINKOPT) $(STATICLIBFLAGS)' mkoctfile zmat.cpp
+oct:   AR= CXXFLAGS='-O3' LDFLAGS='$(MEXLINKOPT) $(STATICLIBFLAGS) $(DARWIN_OCT_LDFLAGS)' mkoctfile zmat.cpp
 oct:   BINARY=zmat.mex
 oct:   ARFLAGS    :=
 oct:   LINKOPT+=--mex $(INCLUDEDIRS) $(LIBZLIB)
