@@ -245,9 +245,10 @@ if platform.system() == "Windows":
     extra_compile_args = ["/O2"]
 else:
     extra_compile_args.append("-fPIC")
-    extra_link_args.extend(["-static-libgcc", "-static-libstdc++"])
     if platform.system() == "Darwin":
         extra_link_args.extend(["-undefined", "dynamic_lookup"])
+    else:
+        extra_link_args.extend(["-static-libgcc", "-static-libstdc++"])
     else:
         if "pthread" not in libraries:
             libraries.append("pthread")

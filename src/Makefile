@@ -57,7 +57,7 @@ ifeq ($(findstring _NT-,$(PLATFORM)), _NT-)
   MEXLINKLIBS="\$$LINKLIBS"
   STATICLIBFLAGS=
 else ifeq ($(findstring Darwin,$(PLATFORM)), Darwin)
-  STATICLIBFLAGS=-static-libgcc -static-libstdc++
+  STATICLIBFLAGS=
 else
   CPPOPT+=
   CUCCOPT+=-Xcompiler $(OMP)
