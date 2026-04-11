@@ -142,7 +142,7 @@ jobs:
             zip -FSr --symlink packages/zmat-octave-${{ env.RELEASE_TAG }}.zip zmat
           fi
       - name: Upload zmat package
-        if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'macos-12' || matrix.os == 'windows-2022' }}
+        if: ${{ matrix.os == 'ubuntu-22.04' || matrix.os == 'macos-15-intel' || matrix.os == 'macos-14' || matrix.os == 'windows-2022' }}
         uses: actions/upload-artifact@v4
         with:
           name: all-zmat-octave-${{ env.RELEASE_TAG }}
