@@ -56,6 +56,9 @@ jobs:
           cd python/
           pip install dist/*.whl
           python -m unittest discover -s tests -v
+      - name: Show dynamic library dependencies
+        run: |
+          find $(python -c "import zmat, os; print(os.path.dirname(zmat.__file__))") -name "*.so" -exec otool -L {} \;
       - name: Check If the Build Version Exists on PyPI
         id: perform_pypi_upload_check
         run: |
