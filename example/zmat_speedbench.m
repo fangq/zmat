@@ -20,11 +20,11 @@ runbench('4. peaks(2000)', single(peaks(2000)), codecs, varargin{:});
 function runbench(name, mat, codecs, varargin)
 disp(name);
 res = cellfun(@(x) benchmark(x, mat, varargin{:}), codecs, 'UniformOutput', false);
-if (exist('OCTAVE_VERSION', 'builtin'))
-    disp(res);
-else
+if (~exist('OCTAVE_VERSION', 'builtin'))
     res = sortrows(struct2table(cell2mat(res)), 'total');
 end
+
+disp(res);
 
 % ----------------------------------------------------------
 function res = benchmark(codec, x, varargin)
