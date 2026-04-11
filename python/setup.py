@@ -249,7 +249,6 @@ else:
         extra_link_args.extend(["-undefined", "dynamic_lookup"])
     else:
         extra_link_args.extend(["-static-libgcc", "-static-libstdc++"])
-    else:
         if "pthread" not in libraries:
             libraries.append("pthread")
         if "m" not in libraries:
