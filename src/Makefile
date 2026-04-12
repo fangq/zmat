@@ -197,15 +197,6 @@ $(OUTPUT_DIR)/$(BINARY): makedirs $(OBJS) blosc
 $(OUTPUT_DIR)/$(BINARY): $(OBJS)
 	@$(ECHO) Building $@
 	$(AR) $(ARFLAGS) $(OUTPUTFLAG) $@ $(OBJS) $(LINKOPT) $(USERLINKOPT)
-ifeq ($(MAKECMDGOALS),oct)
-  ifeq ($(findstring Darwin,$(PLATFORM)), Darwin)
-	@octmex_path=$$(otool -L $@ | awk '/liboctmex/{print $$1}'); \
-	 if [ -n "$$octmex_path" ]; then \
-	   echo "Fixing liboctmex path: $$octmex_path -> @rpath/liboctmex.1.dylib"; \
-	   install_name_tool -change "$$octmex_path" "@rpath/liboctmex.1.dylib" $@; \
-	 fi
-  endif
-endif
 
 %$(OBJSUFFIX): %.cpp
 	@$(ECHO) Building $@

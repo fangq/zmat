@@ -3,3 +3,46 @@ if(exist(file_in_loadpath('zipmat.mex')))
 else
     autoload('zipmat',file_in_loadpath(['octave' filesep regexprep(computer('arch'), 'darwin[0-9.]+-', 'darwin-') filesep 'zipmat.mex']))
 end
+
+%% On macOS, mkoctfile embeds versioned Octave library paths at build time that may
+%% not match the user's installed Octave version. Patch the MEX in-place to fix this.
+%% Handles Octave 8+ (liboctmex.1.dylib) and older Octave (liboctinterp/liboctave with
+%% a version number in the filename, e.g. liboctinterp.7.dylib).
+if ismac()
+    mexpath = file_in_loadpath('zipmat.mex');
+    if isempty(mexpath)
+        mexpath = file_in_loadpath(['octave' filesep regexprep(computer('arch'), 'darwin[0-9.]+-', 'darwin-') filesep 'zipmat.mex']);
+    end
+    if ~isempty(mexpath)
+        [~, octlibdir] = system('mkoctfile -p OCTLIBDIR 2>/dev/null');
+        octlibdir = strtrim(octlibdir);
+        if ~isempty(octlibdir)
+            %% Collect all liboct* versioned dependencies embedded in the MEX
+            [~, deplibs] = system(['otool -L "' mexpath '" 2>/dev/null | grep liboct | awk ''{print $1}''']);
+            deplib_list = strsplit(strtrim(deplibs), char(10));
+            changed = false;
+            for k = 1:numel(deplib_list)
+                curlib = strtrim(deplib_list{k});
+                if isempty(curlib)
+                    continue
+                end
+                [~, libname, libext] = fileparts(curlib);
+                newlib = fullfile(octlibdir, [libname libext]);
+                if ~exist(newlib, 'file')
+                    %% Filename contains a version number (e.g. liboctinterp.7.dylib):
+                    %% strip the numeric suffix and glob for the installed version
+                    stripped = regexprep([libname libext], '\.[0-9]+\.dylib$', '');
+                    [~, found] = system(['ls "' octlibdir '"/' stripped '.*.dylib 2>/dev/null | head -1']);
+                    newlib = strtrim(found);
+                end
+                if ~isempty(newlib) && ~strcmp(curlib, newlib) && exist(newlib, 'file')
+                    system(['install_name_tool -change "' curlib '" "' newlib '" "' mexpath '" 2>/dev/null']);
+                    changed = true;
+                end
+            end
+            if changed
+                system(['codesign --force --sign - "' mexpath '" 2>/dev/null']);
+            end
+        end
+    end
+end
