@@ -58,7 +58,6 @@ ifeq ($(findstring _NT-,$(PLATFORM)), _NT-)
   STATICLIBFLAGS=
 else ifeq ($(findstring Darwin,$(PLATFORM)), Darwin)
   STATICLIBFLAGS=
-  DARWIN_OCT_LDFLAGS=-Wl,-undefined,dynamic_lookup
 else
   CPPOPT+=
   CUCCOPT+=-Xcompiler $(OMP)
@@ -156,7 +155,7 @@ dll:   AROUTPUT   :=-o
 
 oct mex: CPPOPT+= $(DLLFLAG)
 oct:   OUTPUT_DIR=..
-oct:   AR= CXXFLAGS='-O3' LDFLAGS='$(MEXLINKOPT) $(STATICLIBFLAGS) $(DARWIN_OCT_LDFLAGS)' mkoctfile zmat.cpp
+oct:   AR= CXXFLAGS='-O3' LDFLAGS='$(MEXLINKOPT) $(STATICLIBFLAGS)' mkoctfile zmat.cpp
 oct:   BINARY=zmat.mex
 oct:   ARFLAGS    :=
 oct:   LINKOPT+=--mex $(INCLUDEDIRS) $(LIBZLIB)
@@ -198,6 +197,15 @@ $(OUTPUT_DIR)/$(BINARY): makedirs $(OBJS) blosc
 $(OUTPUT_DIR)/$(BINARY): $(OBJS)
 	@$(ECHO) Building $@
 	$(AR) $(ARFLAGS) $(OUTPUTFLAG) $@ $(OBJS) $(LINKOPT) $(USERLINKOPT)
+ifeq ($(MAKECMDGOALS),oct)
+  ifeq ($(findstring Darwin,$(PLATFORM)), Darwin)
+	@octmex_path=$$(otool -L $@ | awk '/liboctmex/{print $$1}'); \
+	 if [ -n "$$octmex_path" ]; then \
+	   echo "Fixing liboctmex path: $$octmex_path -> @rpath/liboctmex.1.dylib"; \
+	   install_name_tool -change "$$octmex_path" "@rpath/liboctmex.1.dylib" $@; \
+	 fi
+  endif
+endif
 
 %$(OBJSUFFIX): %.cpp
 	@$(ECHO) Building $@
