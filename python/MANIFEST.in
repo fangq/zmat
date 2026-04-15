@@ -4,6 +4,12 @@ include README.md
 include setup.py
 include pyproject.toml
 
+# Pure-Python wrapper package
+graft zmat
+
+# Unit tests
+graft tests
+
 # C source tree (copied from ../src and ../include by setup.py)
 graft csrc
 
