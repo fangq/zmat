@@ -45,7 +45,7 @@ endif()
 
 if(USE_BLOSC2)
   include_directories(blosc2/include)
-  add_subdirectory(blosc2/blosc)
+  add_subdirectory(blosc2)
 else()
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNO_BLOSC2")
 endif()
@@ -102,9 +102,11 @@ else()
 endif()
 
 # Link options
-target_link_libraries(
-    zmat
-    )
+if(USE_BLOSC2)
+  target_link_libraries(zmat blosc2_static)
+else()
+  target_link_libraries(zmat)
+endif()
 
 if(Matlab_FOUND)
     if(${CMAKE_VERSION} VERSION_LESS "3.24.0")

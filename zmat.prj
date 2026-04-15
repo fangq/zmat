@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.toolbox" plugin-version="1.0">
-  <configuration build-checksum="2471735789" file="zmat.prj" location="." name="zmat" target="target.toolbox" target-name="Package Toolbox">
+  <configuration build-checksum="2471735789" file="/home/fangq/space/git/Project/github/zmat/zmat.prj" location="/home/fangq/space/git/Project/github/zmat" name="zmat" target="target.toolbox" target-name="Package Toolbox">
     <param.appname>zmat</param.appname>
     <param.authnamewatermark>Qianqian Fang</param.authnamewatermark>
     <param.email>fangqq@gmail.com</param.email>
@@ -12,9 +12,9 @@ array within a fraction of a second. Among the 6 supported compression
 methods, lz4 is the fastest for compression/decompression; lzma is the 
 slowest but has the highest compression ratio; zlib/gzip have the best 
 balance between speed and compression time.</param.description>
-    <param.screenshot>${PROJECT_ROOT}\images\zmat_logo.png</param.screenshot>
-    <param.version>0.9.9</param.version>
-    <param.output>${PROJECT_ROOT}\zmat.mltbx</param.output>
+    <param.screenshot>${PROJECT_ROOT}/images/zmat_logo.png</param.screenshot>
+    <param.version>1.0.0</param.version>
+    <param.output>${PROJECT_ROOT}/zmat.mltbx</param.output>
     <param.products.name />
     <param.products.id />
     <param.products.version />
@@ -89,39 +89,46 @@ Makefile</param.exclude.filters>
       <file>${PROJECT_ROOT}</file>
     </fileset.rootdir>
     <fileset.rootfiles>
-      <file>${PROJECT_ROOT}\AUTHORS.txt</file>
-      <file>${PROJECT_ROOT}\ChangeLog.txt</file>
-      <file>${PROJECT_ROOT}\example</file>
-      <file>${PROJECT_ROOT}\LICENSE.txt</file>
-      <file>${PROJECT_ROOT}\private</file>
-      <file>${PROJECT_ROOT}\README.rst</file>
-      <file>${PROJECT_ROOT}\test</file>
-      <file>${PROJECT_ROOT}\zmat.m</file>
+      <file>${PROJECT_ROOT}/AUTHORS.txt</file>
+      <file>${PROJECT_ROOT}/ChangeLog.txt</file>
+      <file>${PROJECT_ROOT}/LICENSE.txt</file>
+      <file>${PROJECT_ROOT}/README.rst</file>
+      <file>${PROJECT_ROOT}/example</file>
+      <file>${PROJECT_ROOT}/private</file>
+      <file>${PROJECT_ROOT}/test</file>
+      <file>${PROJECT_ROOT}/zmat.m</file>
     </fileset.rootfiles>
     <fileset.depfun.included />
     <fileset.depfun.excluded />
     <fileset.package />
     <build-deliverables>
-      <file location="${PROJECT_ROOT}" name="zmat.mltbx" optional="false">zmat.mltbx</file>
+      <file location="${PROJECT_ROOT}" name="zmat.mltbx" optional="false">/home/fangq/space/git/Project/github/zmat/zmat.mltbx</file>
     </build-deliverables>
     <workflow />
     <matlab>
-      <root>C:\Program Files\MATLAB\R2020a</root>
-      <toolboxes />
+      <root>/opt/MATLAB/R2024b</root>
+      <toolboxes>
+        <toolbox name="matlabcoder" />
+      </toolboxes>
+      <toolbox>
+        <matlabcoder>
+          <enabled>true</enabled>
+        </matlabcoder>
+      </toolbox>
     </matlab>
     <platform>
-      <unix>false</unix>
+      <unix>true</unix>
       <mac>false</mac>
-      <windows>true</windows>
+      <windows>false</windows>
       <win2k>false</win2k>
       <winxp>false</winxp>
       <vista>false</vista>
-      <linux>false</linux>
+      <linux>true</linux>
       <solaris>false</solaris>
-      <osver>10.0</osver>
+      <osver>6.8.0-106-generic</osver>
       <os32>false</os32>
       <os64>true</os64>
-      <arch>win64</arch>
+      <arch>glnxa64</arch>
       <matlab>true</matlab>
     </platform>
   </configuration>

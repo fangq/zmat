@@ -1,6 +1,6 @@
 Name: zmat
-Version: 0.9.9
-Date: 2023-22-10
+Version: 1.0.0
+Date: 2026-16-04
 Title: In-memory data compression with zlib/gzip/lzma/lz4/zstd/blosc2 for Octave
 Author: Qianqian Fang <fangqq@gmail.com>
 Maintainer: Qianqian Fang <fangqq@gmail.com>

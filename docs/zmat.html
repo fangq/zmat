@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZMat - Portable Data Compression for MATLAB, Python &amp; C</title>
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&family=Ubuntu:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #eaeff9;
+      --sd:       #c3c8d4;  /* shadow dark  */
+      --sl:       #ffffff;  /* shadow light */
+      --primary:  #2E5CB8;
+      --pd:       #1e3f8a;
+      --pl:       #5c85d6;
+      --text:     #37426b;
+      --muted:    #7886a8;
+      --green:    #27ae60;
+      --orange:   #e67e22;
+      --rad:      16px;
+      --radsm:    10px;
+    }
+    /* ── reset ── */
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: 'Ubuntu', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* ── scrollbar ── */
+    ::-webkit-scrollbar { width:8px; height:8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--sd); border-radius:4px; }
+
+    /* ══ NEOMORPHISM HELPERS ══ */
+    .neo       { background:var(--bg); border-radius:var(--rad);
+                 box-shadow: 7px 7px 14px var(--sd), -7px -7px 14px var(--sl); }
+    .neo-sm    { background:var(--bg); border-radius:var(--radsm);
+                 box-shadow: 4px 4px 9px var(--sd), -4px -4px 9px var(--sl); }
+    .neo-in    { background:var(--bg); border-radius:var(--radsm);
+                 box-shadow: inset 4px 4px 9px var(--sd), inset -4px -4px 9px var(--sl); }
+    .neo-in-lg { background:var(--bg); border-radius:var(--rad);
+                 box-shadow: inset 6px 6px 14px var(--sd), inset -6px -6px 14px var(--sl); }
+
+    /* ── nav ── */
+    nav {
+      position:fixed; top:0; left:0; right:0; height:60px; z-index:1000;
+      background: var(--bg);
+      display:flex; align-items:center; justify-content:space-between; padding:0 36px;
+      box-shadow: 0 5px 14px var(--sd), 0 -2px 6px var(--sl);
+    }
+    .logo { font-family:'Titillium Web',sans-serif; font-size:24px; font-weight:700;
+            color:var(--primary); letter-spacing:1px; }
+    .nav-links { display:flex; gap:8px; list-style:none; }
+    .nav-links a {
+      color:var(--muted); text-decoration:none; font-size:13px; font-weight:600;
+      padding:7px 16px; border-radius:var(--radsm); cursor:pointer; transition:.2s;
+      background:var(--bg);
+      box-shadow: 3px 3px 7px var(--sd), -3px -3px 7px var(--sl);
+    }
+    .nav-links a:hover  { color:var(--primary);
+                          box-shadow: 5px 5px 10px var(--sd), -5px -5px 10px var(--sl); }
+    .nav-links a.active { color:var(--primary);
+                          box-shadow: inset 3px 3px 7px var(--sd), inset -3px -3px 7px var(--sl); }
+
+    /* ── slider / sections ── */
+    .slider-container { margin-top:60px; height:calc(100vh - 60px); overflow-y:auto; scroll-behavior:smooth; }
+    section {
+      min-height:calc(100vh - 60px); display:flex; align-items:center;
+      justify-content:center; padding:50px 36px; background:var(--bg);
+    }
+    section:nth-child(even) { background:#ecf1fa; }   /* very subtle alternation */
+    .section-content { max-width:1120px; width:100%; }
+    .section-title   { font-family:'Titillium Web',sans-serif; font-size:32px; font-weight:700;
+                       color:var(--primary); text-align:center; margin-bottom:10px; }
+    .section-sub     { font-size:15px; color:var(--muted); text-align:center; margin-bottom:32px; }
+
+    /* ── HERO ── */
+    #hero { padding-top:30px; padding-bottom:30px; }
+    .hero-header { text-align:center; margin-bottom:24px; padding-bottom:18px;
+                   border-bottom:2px solid rgba(46,92,184,.2); }
+    .hero-header h1 { font-family:'Titillium Web',sans-serif; font-size:44px; font-weight:700;
+                      color:var(--primary); }
+    .hero-header p  { font-size:17px; color:var(--muted); margin:10px 0 16px; }
+    .hero-badges    { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+    .badge {
+      padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600;
+      background:var(--bg);
+      box-shadow: 3px 3px 7px var(--sd), -3px -3px 7px var(--sl);
+      color:var(--primary);
+    }
+    .badge-py  { color:#3776ab; }
+    .badge-mat { color:#0076a8; }
+
+    /* hero layout */
+    .hero-body { display:flex; gap:0; border-radius:var(--rad); overflow:hidden;
+                 box-shadow: 9px 9px 18px var(--sd), -9px -9px 18px var(--sl); min-height:440px; }
+    .hero-sidebar {
+      width:160px; display:flex; flex-direction:column;
+      background:#e2e8f5; border-right:1px solid rgba(46,92,184,.12);
+    }
+    .hero-tab-btn {
+      flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:8px; padding:20px 10px; border:none; background:transparent; cursor:pointer;
+      font-family:'Ubuntu',sans-serif; font-size:12px; font-weight:600; color:var(--muted);
+      border-bottom:1px solid rgba(46,92,184,.1); transition:.25s;
+    }
+    .hero-tab-btn:last-child { border-bottom:none; }
+    .hero-tab-btn .icon { font-size:28px; }
+    .hero-tab-btn:hover  { background:#dce4f2; color:var(--primary); }
+    .hero-tab-btn.active { background:var(--bg); color:var(--primary);
+                           box-shadow:inset -4px 0 0 var(--primary); }
+    .hero-pane { flex:1; padding:28px 36px; overflow-y:auto; }
+    .hero-pane-content { display:none; animation:fadeSlide .35s ease; }
+    .hero-pane-content.active { display:block; }
+    @keyframes fadeSlide {
+      from { opacity:0; transform:translateX(18px); }
+      to   { opacity:1; transform:translateX(0); }
+    }
+
+    /* hero inner blocks */
+    .pane-h2 { font-family:'Titillium Web',sans-serif; font-size:22px; font-weight:700;
+               color:var(--primary); margin-bottom:12px; }
+    .pane-p  { font-size:14px; color:var(--muted); line-height:1.65; margin-bottom:10px; }
+
+    .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:18px 0; }
+    .stat-card { padding:16px 10px; border-radius:var(--radsm); text-align:center;
+                 box-shadow: 5px 5px 11px var(--sd), -5px -5px 11px var(--sl);
+                 background:var(--bg); }
+    .stat-num  { font-family:'Titillium Web',sans-serif; font-size:26px; font-weight:700;
+                 color:var(--primary); }
+    .stat-lbl  { font-size:11px; color:var(--muted); font-weight:600; margin-top:4px; }
+
+    .info-box {
+      padding:14px 18px; border-radius:var(--radsm); margin:16px 0;
+      box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl);
+    }
+    .info-box h4 { font-size:13px; font-weight:700; color:var(--orange); margin-bottom:6px; }
+    .info-box p  { font-size:13px; color:var(--muted); line-height:1.6; }
+
+    .hero-btns { display:flex; gap:12px; flex-wrap:wrap; margin-top:20px; }
+    .btn {
+      padding:9px 22px; border-radius:var(--radsm); font-size:13px; font-weight:600;
+      text-decoration:none; cursor:pointer; border:none; font-family:'Ubuntu',sans-serif;
+      transition:.2s; display:inline-block;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--pl), var(--pd));
+      color:#fff;
+      box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+    }
+    .btn-primary:hover { box-shadow: 6px 6px 14px var(--sd), -6px -6px 14px var(--sl); }
+    .btn-neo {
+      background:var(--bg); color:var(--primary);
+      box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+    }
+    .btn-neo:hover { box-shadow: 6px 6px 14px var(--sd), -6px -6px 14px var(--sl); }
+
+    /* codec table */
+    .ctable { width:100%; border-collapse:collapse; font-size:13px; margin:12px 0; }
+    .ctable th { background:var(--primary); color:#fff; padding:9px 12px; text-align:left; font-weight:600; }
+    .ctable td { padding:9px 12px; border-bottom:1px solid rgba(46,92,184,.1); color:var(--text); }
+    .ctable tr:last-child td { border-bottom:none; }
+    .ctable tr:nth-child(even) td { background:rgba(46,92,184,.04); }
+
+    /* perf grid */
+    .perf-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+    .perf-card {
+      padding:16px; border-radius:var(--radsm);
+      box-shadow: 5px 5px 11px var(--sd), -5px -5px 11px var(--sl);
+    }
+    .perf-card h4 { font-size:14px; font-weight:700; color:var(--primary); margin-bottom:8px; }
+    .perf-card ul { margin-left:16px; font-size:13px; color:var(--muted); line-height:1.7; }
+
+    /* ── FEATURES ── */
+    .feat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+                 gap:20px; margin-top:28px; }
+    .feat-card {
+      padding:22px; border-radius:var(--rad); text-align:center;
+      box-shadow: 7px 7px 14px var(--sd), -7px -7px 14px var(--sl);
+      transition:.25s;
+    }
+    .feat-card:hover { box-shadow: 10px 10px 20px var(--sd), -10px -10px 20px var(--sl); }
+    .feat-icon { font-size:34px; margin-bottom:12px; }
+    .feat-card h3 { font-family:'Titillium Web',sans-serif; font-size:16px; font-weight:700;
+                    color:var(--primary); margin-bottom:8px; }
+    .feat-card p  { font-size:13px; color:var(--muted); line-height:1.6; }
+
+    /* ── EXAMPLES ── */
+    /* language toggle */
+    .lang-toggle { display:flex; gap:0; margin-bottom:28px; border-radius:var(--rad); overflow:hidden;
+                   box-shadow: 6px 6px 13px var(--sd), -6px -6px 13px var(--sl);
+                   width:fit-content; }
+    .lang-btn {
+      padding:12px 28px; border:none; cursor:pointer; font-size:14px; font-weight:600;
+      font-family:'Ubuntu',sans-serif; background:var(--bg); color:var(--muted); transition:.25s;
+    }
+    .lang-btn:first-child { border-radius:var(--rad) 0 0 var(--rad); }
+    .lang-btn:last-child  { border-radius:0 var(--rad) var(--rad) 0; }
+    .lang-btn.active {
+      background: linear-gradient(135deg, var(--pl), var(--pd));
+      color:#fff;
+      box-shadow: inset 3px 3px 8px rgba(0,0,0,.2);
+    }
+    .lang-pane { display:none; }
+    .lang-pane.active { display:block; animation:fadeSlide .3s ease; }
+
+    /* sub-tabs */
+    .sub-tabs { display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap; }
+    .sub-btn {
+      padding:8px 18px; border:none; border-radius:var(--radsm); cursor:pointer;
+      font-size:13px; font-weight:600; font-family:'Ubuntu',sans-serif;
+      background:var(--bg); color:var(--muted); transition:.2s;
+      box-shadow: 3px 3px 7px var(--sd), -3px -3px 7px var(--sl);
+    }
+    .sub-btn:hover { color:var(--primary); }
+    .sub-btn.active {
+      color:var(--primary);
+      box-shadow: inset 3px 3px 7px var(--sd), inset -3px -3px 7px var(--sl);
+    }
+    .sub-pane { display:none; }
+    .sub-pane.active { display:block; animation:fadeSlide .3s ease; }
+
+    /* code block */
+    .code-wrap {
+      border-radius:var(--rad); padding:22px;
+      box-shadow: inset 5px 5px 12px var(--sd), inset -5px -5px 12px var(--sl);
+      overflow-x:auto; max-height:58vh; overflow-y:auto;
+    }
+    .code-wrap pre { margin:0; font-family:'JetBrains Mono','Consolas','Courier New',monospace;
+                     font-size:12.5px; line-height:1.65; color:var(--text); }
+    .kw   { color:var(--primary); font-weight:600; }
+    .str  { color:var(--green); }
+    .cmt  { color:var(--muted); font-style:italic; }
+    .num  { color:var(--orange); }
+    .fn   { color:#8a5cf6; }
+
+    .build-note {
+      margin-top:14px; padding:14px 18px; border-radius:var(--radsm);
+      border-left:4px solid var(--primary);
+      box-shadow: inset 3px 3px 7px var(--sd), inset -3px -3px 7px var(--sl);
+    }
+    .build-note h4 { font-size:13px; font-weight:700; color:var(--primary); margin-bottom:8px; }
+
+    /* ── API REFERENCE ── */
+    .api-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+                gap:20px; margin-top:28px; }
+    .api-card {
+      padding:20px; border-radius:var(--rad);
+      box-shadow: 6px 6px 13px var(--sd), -6px -6px 13px var(--sl);
+    }
+    .api-card h3 { font-family:'Titillium Web',sans-serif; font-size:16px; font-weight:700;
+                   color:var(--primary); margin-bottom:14px; padding-bottom:8px;
+                   border-bottom:2px solid rgba(46,92,184,.15); }
+    .api-card .lang-label { display:inline-block; font-size:11px; font-weight:700;
+                            padding:2px 8px; border-radius:6px; margin-bottom:10px; }
+    .lbl-mat { background:rgba(0,118,168,.12); color:#0076a8; }
+    .lbl-py  { background:rgba(55,118,171,.12); color:#3776ab; }
+    .lbl-c   { background:rgba(100,100,200,.12); color:#5050b8; }
+    .fn-list { list-style:none; }
+    .fn-list li { padding:7px 0; border-bottom:1px solid rgba(46,92,184,.08);
+                  font-family:'JetBrains Mono','Consolas',monospace; font-size:12px; color:var(--text); }
+    .fn-list li:last-child { border-bottom:none; }
+    .fn-list .fn-desc { display:block; font-family:'Ubuntu',sans-serif; font-size:11px;
+                        color:var(--muted); margin-top:2px; }
+
+    /* ── INSTALL ── */
+    .install-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+                    gap:20px; margin-top:28px; }
+    .install-card {
+      padding:22px; border-radius:var(--rad);
+      box-shadow: 6px 6px 13px var(--sd), -6px -6px 13px var(--sl);
+    }
+    .install-card h3 { font-family:'Titillium Web',sans-serif; font-size:16px; font-weight:700;
+                       color:var(--primary); margin-bottom:10px; }
+    .install-card p  { font-size:13px; color:var(--muted); margin-bottom:10px; line-height:1.5; }
+    .install-card .code-sm {
+      border-radius:var(--radsm); padding:14px; font-family:'JetBrains Mono','Consolas',monospace;
+      font-size:12px; color:var(--primary); line-height:1.6;
+      box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl);
+    }
+
+    /* ── DOWNLOAD ── */
+    #download { background: linear-gradient(160deg, var(--pd) 0%, var(--primary) 50%, var(--pl) 100%); }
+    #download .section-title { color:#fff; }
+    #download .section-sub   { color:rgba(255,255,255,.8); }
+    .dl-stats { display:flex; justify-content:center; gap:50px; flex-wrap:wrap; margin:30px 0; }
+    .dl-stat-num { font-family:'Titillium Web',sans-serif; font-size:40px; font-weight:700;
+                   color:#fff; text-align:center; margin-bottom:4px; }
+    .dl-stat-lbl { font-size:13px; color:rgba(255,255,255,.8); text-align:center; }
+    .dl-btns { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
+    .btn-dl-primary {
+      padding:11px 28px; border-radius:var(--radsm); font-size:14px; font-weight:600;
+      background:#fff; color:var(--primary); text-decoration:none;
+      box-shadow:0 4px 14px rgba(0,0,0,.2); transition:.2s;
+    }
+    .btn-dl-primary:hover { box-shadow:0 6px 20px rgba(0,0,0,.3); }
+    .btn-dl-ghost {
+      padding:11px 28px; border-radius:var(--radsm); font-size:14px; font-weight:600;
+      background:transparent; color:#fff; text-decoration:none;
+      border:2px solid rgba(255,255,255,.6); transition:.2s;
+    }
+    .btn-dl-ghost:hover { background:rgba(255,255,255,.12); }
+
+    /* ── responsive ── */
+    @media(max-width:768px){
+      nav { padding:0 16px; }
+      .nav-links { gap:2px; }
+      .nav-links a { padding:5px 8px; font-size:12px; }
+      .hero-body { flex-direction:column; }
+      .hero-sidebar { width:100%; flex-direction:row; overflow-x:auto; }
+      .hero-tab-btn { flex:none; min-width:80px; }
+      .hero-tab-btn.active { box-shadow:inset 0 -4px 0 var(--primary); }
+      .perf-grid { grid-template-columns:1fr; }
+      .stats-row { grid-template-columns:repeat(3,1fr); }
+      section { padding:40px 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav id="main-nav">
+  <div class="logo">ZMat</div>
+  <ul class="nav-links">
+    <li><a href="javascript:void(0)" onclick="gotoSection('hero')">Home</a></li>
+    <li><a href="javascript:void(0)" onclick="gotoSection('feature-section')">Features</a></li>
+    <li><a href="javascript:void(0)" onclick="gotoSection('examples')">Examples</a></li>
+    <li><a href="javascript:void(0)" onclick="gotoSection('functions')">API</a></li>
+    <li><a href="javascript:void(0)" onclick="gotoSection('installation')">Install</a></li>
+    <li><a href="javascript:void(0)" onclick="gotoSection('download')">Download</a></li>
+  </ul>
+</nav>
+
+<div class="slider-container" id="sc">
+
+<!-- ════════════════════ HERO ════════════════════ -->
+<section id="hero">
+  <div class="section-content">
+    <div class="hero-header">
+      <h1>ZMat</h1>
+      <p>Portable data compression library for <strong>MATLAB/Octave</strong>, <strong>Python</strong> and <strong>C/Fortran</strong></p>
+      <div class="hero-badges">
+        <span class="badge">v1.0.0</span>
+        <span class="badge badge-mat">MATLAB / Octave</span>
+        <span class="badge badge-py">Python</span>
+        <span class="badge">C Library</span>
+        <span class="badge">Fortran90</span>
+        <span class="badge">GPL v3</span>
+        <span class="badge">NIH Funded</span>
+      </div>
+    </div>
+
+    <div class="hero-body">
+      <div class="hero-sidebar">
+        <button class="hero-tab-btn active" onclick="heroTab('ov',this)">
+          <span class="icon">🗜️</span>Overview
+        </button>
+        <button class="hero-tab-btn" onclick="heroTab('codecs',this)">
+          <span class="icon">⚙️</span>Codecs
+        </button>
+        <button class="hero-tab-btn" onclick="heroTab('perf',this)">
+          <span class="icon">⚡</span>Performance
+        </button>
+      </div>
+
+      <div class="hero-pane">
+
+        <!-- Overview -->
+        <div id="ov" class="hero-pane-content active">
+          <p class="pane-h2">🗜️ What is ZMat?</p>
+          <p class="pane-p">ZMat provides a fast, portable <strong>C compression library (libzmat)</strong> with bindings for MATLAB/Octave (MEX) and Python (C extension). A single unified API gives you access to 12 codecs with zero external dependencies.</p>
+          <div class="info-box">
+            <h4>🏆 NeuroJSON Project</h4>
+            <p>Part of the NeuroJSON project (neurojson.org), funded by NIH grant U24-NS124027. Powers compression in JSONLab, JNIfTI and other NeuroJSON tools.</p>
+          </div>
+          <div class="stats-row">
+            <div class="stat-card"><div class="stat-num">12</div><div class="stat-lbl">Total Codecs</div></div>
+            <div class="stat-card"><div class="stat-num">3</div><div class="stat-lbl">Language Bindings</div></div>
+            <div class="stat-card"><div class="stat-num">6+</div><div class="stat-lbl">Years Active</div></div>
+          </div>
+          <div class="hero-btns">
+            <a href="https://github.com/NeuroJSON/zmat" class="btn btn-primary">GitHub</a>
+            <a onclick="gotoSection('examples')" class="btn btn-neo" style="cursor:pointer">Examples</a>
+            <a href="https://neurojson.org" class="btn btn-neo">NeuroJSON</a>
+          </div>
+        </div>
+
+        <!-- Codecs -->
+        <div id="codecs" class="hero-pane-content">
+          <p class="pane-h2">⚙️ Supported Codecs</p>
+          <table class="ctable">
+            <thead><tr><th>Method</th><th>Speed</th><th>Ratio</th><th>Best For</th></tr></thead>
+            <tbody>
+              <tr><td><strong>lz4</strong></td><td>⚡⚡⚡⚡⚡</td><td>⭐⭐</td><td>Real-time / streaming</td></tr>
+              <tr><td><strong>zlib / gzip</strong></td><td>⚡⚡⚡⚡</td><td>⭐⭐⭐</td><td>Balanced; wide compatibility</td></tr>
+              <tr><td><strong>zstd</strong></td><td>⚡⚡⚡</td><td>⭐⭐⭐⭐</td><td>Modern high-throughput</td></tr>
+              <tr><td><strong>lz4hc</strong></td><td>⚡⚡⚡</td><td>⭐⭐⭐</td><td>LZ4 with better ratio</td></tr>
+              <tr><td><strong>lzma / lzip</strong></td><td>⚡</td><td>⭐⭐⭐⭐⭐</td><td>Maximum compression</td></tr>
+              <tr><td><strong>blosc2*</strong></td><td>⚡⚡⚡⚡</td><td>⭐⭐⭐⭐</td><td>N-D numeric arrays</td></tr>
+              <tr><td><strong>base64</strong></td><td>⚡⚡⚡⚡⚡</td><td>—</td><td>Text-safe encoding</td></tr>
+            </tbody>
+          </table>
+          <p class="pane-p" style="font-size:12px">* blosc2 variants: blosclz, lz4, lz4hc, zlib, zstd</p>
+        </div>
+
+        <!-- Performance -->
+        <div id="perf" class="hero-pane-content">
+          <p class="pane-h2">⚡ Performance Guide</p>
+          <div class="perf-grid">
+            <div class="perf-card">
+              <h4>🚀 Ultra-Fast — LZ4</h4>
+              <ul><li>Fastest compress &amp; decompress</li><li>Ideal for real-time pipelines</li><li>Level 1–9</li></ul>
+            </div>
+            <div class="perf-card">
+              <h4>⚖️ Balanced — zlib / zstd</h4>
+              <ul><li>Industry-standard algorithms</li><li>Python stdlib interoperable</li><li>Level 1–9 (zstd up to 22)</li></ul>
+            </div>
+            <div class="perf-card">
+              <h4>🎯 Smallest — LZMA</h4>
+              <ul><li>Highest compression ratio</li><li>Best for archival/cold storage</li><li>Level 1–9</li></ul>
+            </div>
+            <div class="perf-card">
+              <h4>🔬 Scientific — Blosc2</h4>
+              <ul><li>Optimized for N-D arrays</li><li>Byte-shuffle pre-filter</li><li>Multi-threaded (nthread)</li></ul>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /hero-pane -->
+    </div><!-- /hero-body -->
+  </div>
+</section>
+
+<!-- ════════════════════ FEATURES ════════════════════ -->
+<section id="feature-section">
+  <div class="section-content">
+    <h2 class="section-title">Key Features</h2>
+    <p class="section-sub">One library, every language you need</p>
+    <div class="feat-grid">
+      <div class="feat-card neo">
+        <div class="feat-icon">🔧</div>
+        <h3>libzmat C Library</h3>
+        <p>Static &amp; dynamic library. Embed directly in any C/C++/Fortran project.</p>
+      </div>
+      <div class="feat-card neo">
+        <div class="feat-icon">📐</div>
+        <h3>MATLAB / Octave MEX</h3>
+        <p>Single <code>zmat()</code> call for compress, decompress, encode and decode.</p>
+      </div>
+      <div class="feat-card neo">
+        <div class="feat-icon">🐍</div>
+        <h3>Python Extension</h3>
+        <p><code>pip install zmat</code> — pure C extension, zero runtime dependencies.</p>
+      </div>
+      <div class="feat-card neo">
+        <div class="feat-icon">🌍</div>
+        <h3>Cross-Platform</h3>
+        <p>Windows, Linux, macOS. Pre-compiled MEX &amp; Python wheels available.</p>
+      </div>
+      <div class="feat-card neo">
+        <div class="feat-icon">📦</div>
+        <h3>12 Codecs Built-in</h3>
+        <p>zlib, gzip, lzma, lzip, lz4, lz4hc, zstd, 5× blosc2, base64.</p>
+      </div>
+      <div class="feat-card neo">
+        <div class="feat-icon">🔀</div>
+        <h3>Type Preservation</h3>
+        <p>MATLAB <code>info</code> struct restores original array type and dimensions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ EXAMPLES ════════════════════ -->
+<section id="examples">
+  <div class="section-content">
+    <h2 class="section-title">Code Examples</h2>
+    <p class="section-sub">Choose your language</p>
+
+    <!-- language toggle -->
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="langSwitch('mat',this)">🟦 MATLAB / Octave</button>
+      <button class="lang-btn"        onclick="langSwitch('py', this)">🐍 Python</button>
+      <button class="lang-btn"        onclick="langSwitch('c',  this)">⚙️ C / Fortran</button>
+    </div>
+
+    <!-- ── MATLAB pane ── -->
+    <div id="lang-mat" class="lang-pane active">
+      <div class="sub-tabs">
+        <button class="sub-btn active" onclick="subTab('mat','mat-basic',this)">Basic</button>
+        <button class="sub-btn"        onclick="subTab('mat','mat-methods',this)">Methods</button>
+        <button class="sub-btn"        onclick="subTab('mat','mat-blosc',this)">Blosc2</button>
+        <button class="sub-btn"        onclick="subTab('mat','mat-base64',this)">Base64</button>
+      </div>
+
+      <div id="mat-basic" class="sub-pane active">
+        <div class="code-wrap neo-in-lg"><pre><code><span class="cmt">% ── Compress with default zlib ──────────────────────────────────</span>
+[compressed, info] = <span class="fn">zmat</span>(eye(<span class="num">10</span>));
+
+<span class="cmt">% Decompress using the info struct (restores type + dimensions)</span>
+original = <span class="fn">zmat</span>(compressed, info);
+
+<span class="cmt">% Or decompress manually (iscompress = 0)</span>
+original = <span class="fn">zmat</span>(compressed, <span class="num">0</span>);
+<span class="fn">isequal</span>(original, eye(<span class="num">10</span>))   <span class="cmt">% → 1</span>
+
+<span class="cmt">% ── Compression level ───────────────────────────────────────────</span>
+<span class="cmt">% iscompress = -N sets compression level N (1–9)</span>
+data = <span class="fn">rand</span>(<span class="num">500</span>, <span class="num">500</span>);
+[c1, i1] = <span class="fn">zmat</span>(data, <span class="num">-1</span>, <span class="str">'zlib'</span>);   <span class="cmt">% fast, larger</span>
+[c9, i9] = <span class="fn">zmat</span>(data, <span class="num">-9</span>, <span class="str">'zlib'</span>);   <span class="cmt">% slow, smaller</span>
+<span class="fn">fprintf</span>(<span class="str">'Level 1: %d B  Level 9: %d B\n'</span>, <span class="fn">numel</span>(c1), <span class="fn">numel</span>(c9));
+
+<span class="cmt">% ── Round-trip any array type ───────────────────────────────────</span>
+img = <span class="fn">uint8</span>(<span class="fn">rand</span>(<span class="num">256</span>,<span class="num">256</span>,<span class="num">3</span>) * <span class="num">255</span>);
+[cimg, iimg] = <span class="fn">zmat</span>(img, <span class="num">1</span>, <span class="str">'lz4'</span>);
+restored = <span class="fn">zmat</span>(cimg, iimg);    <span class="cmt">% uint8 256×256×3 restored</span>
+</code></pre></div>
+      </div>
+
+      <div id="mat-methods" class="sub-pane">
+        <div class="code-wrap neo-in-lg"><pre><code><span class="cmt">% ── Benchmark all codecs on the same data ───────────────────────</span>
+data   = <span class="fn">rand</span>(<span class="num">500</span>, <span class="num">500</span>);       <span class="cmt">% 2 MB of doubles</span>
+codecs = {<span class="str">'zlib'</span>,<span class="str">'gzip'</span>,<span class="str">'lzma'</span>,<span class="str">'lzip'</span>,<span class="str">'lz4'</span>,<span class="str">'lz4hc'</span>,<span class="str">'zstd'</span>};
+
+<span class="kw">for</span> k = <span class="num">1</span>:<span class="fn">numel</span>(codecs)
+    t = tic;
+    [cdata, info] = <span class="fn">zmat</span>(data, <span class="num">1</span>, codecs{k});
+    tc = toc(t);
+    t = tic;
+    orig = <span class="fn">zmat</span>(cdata, info);
+    td = toc(t);
+    <span class="fn">fprintf</span>(<span class="str">'%-8s  %6.1f KB  ratio=%.2f  c=%.3fs  d=%.3fs\n'</span>, ...
+        codecs{k}, <span class="fn">numel</span>(cdata)/<span class="num">1024</span>, <span class="fn">numel</span>(cdata)/<span class="fn">numel</span>(data)/<span class="num">8</span>, tc, td);
+<span class="kw">end</span>
+
+<span class="cmt">% ── Decompression with explicit method ──────────────────────────</span>
+[czstd, ~] = <span class="fn">zmat</span>(data, <span class="num">1</span>, <span class="str">'zstd'</span>);
+orig = <span class="fn">zmat</span>(czstd, <span class="num">0</span>, <span class="str">'zstd'</span>);     <span class="cmt">% pass method explicitly</span>
+<span class="fn">assert</span>(<span class="fn">isequal</span>(orig, data));
+</code></pre></div>
+      </div>
+
+      <div id="mat-blosc" class="sub-pane">
+        <div class="code-wrap neo-in-lg"><pre><code><span class="cmt">% ── Blosc2 meta-compressor (optimized for N-D numeric arrays) ───</span>
+vol = <span class="fn">uint16</span>(<span class="fn">rand</span>(<span class="num">128</span>,<span class="num">128</span>,<span class="num">64</span>) * <span class="num">65535</span>);   <span class="cmt">% 3-D volume, uint16</span>
+
+<span class="cmt">% Basic blosc2 variants</span>
+[b_lz4,  i1] = <span class="fn">zmat</span>(vol, <span class="num">1</span>, <span class="str">'blosc2lz4'</span>);
+[b_zstd, i2] = <span class="fn">zmat</span>(vol, <span class="num">1</span>, <span class="str">'blosc2zstd'</span>);
+[b_zlib, i3] = <span class="fn">zmat</span>(vol, <span class="num">1</span>, <span class="str">'blosc2zlib'</span>);
+
+<span class="fn">fprintf</span>(<span class="str">'lz4: %d  zstd: %d  zlib: %d bytes\n'</span>, ...
+    <span class="fn">numel</span>(b_lz4), <span class="fn">numel</span>(b_zstd), <span class="fn">numel</span>(b_zlib));
+
+<span class="cmt">% Advanced: 4 threads, byte-shuffle, typesize=2 (uint16)</span>
+[best, info] = <span class="fn">zmat</span>(vol, <span class="num">-6</span>, <span class="str">'blosc2zstd'</span>, ...
+    <span class="str">'nthread'</span>, <span class="num">4</span>, <span class="str">'shuffle'</span>, <span class="num">1</span>, <span class="str">'typesize'</span>, <span class="num">2</span>);
+
+<span class="cmt">% Decompress — info carries nthread / shuffle / typesize</span>
+restored = <span class="fn">zmat</span>(best, info);
+<span class="fn">assert</span>(<span class="fn">isequal</span>(restored, vol));
+</code></pre></div>
+      </div>
+
+      <div id="mat-base64" class="sub-pane">
+        <div class="code-wrap neo-in-lg"><pre><code><span class="cmt">% ── Base64 encode / decode ──────────────────────────────────────</span>
+str = <span class="str">'ZMat compression test'</span>;
+
+<span class="cmt">% Encode  (iscompress=2 strips trailing newline)</span>
+encoded = <span class="fn">char</span>(<span class="fn">zmat</span>(str, <span class="num">2</span>, <span class="str">'base64'</span>));
+<span class="fn">disp</span>(encoded)   <span class="cmt">% → 'Wk1hdCBjb21wcmVzc2lvbiB0ZXN0'</span>
+
+<span class="cmt">% Decode</span>
+decoded = <span class="fn">char</span>(<span class="fn">zmat</span>(encoded, <span class="num">0</span>, <span class="str">'base64'</span>));
+<span class="fn">assert</span>(<span class="fn">strcmp</span>(decoded, str));
+
+<span class="cmt">% Keep newlines every 76 chars (iscompress=3 = RFC 2045 style)</span>
+encoded_full = <span class="fn">char</span>(<span class="fn">zmat</span>(str, <span class="num">3</span>, <span class="str">'base64'</span>));
+
+<span class="cmt">% Chain: compress then base64-encode for JSON embedding</span>
+data  = <span class="fn">rand</span>(<span class="num">50</span>, <span class="num">50</span>);
+[cmp, info] = <span class="fn">zmat</span>(data, <span class="num">1</span>, <span class="str">'zlib'</span>);
+b64  = <span class="fn">char</span>(<span class="fn">zmat</span>(cmp, <span class="num">2</span>, <span class="str">'base64'</span>));   <span class="cmt">% safe for JSON strings</span>
+
+<span class="cmt">% Reverse: base64-decode then decompress</span>
+raw  = <span class="fn">zmat</span>(<span class="fn">uint8</span>(b64), <span class="num">0</span>, <span class="str">'base64'</span>);
+orig = <span class="fn">zmat</span>(raw, info);
+<span class="fn">assert</span>(<span class="fn">isequal</span>(orig, data));
+</code></pre></div>
+      </div>
+    </div><!-- /lang-mat -->
+
+    <!-- ── PYTHON pane ── -->
+    <div id="lang-py" class="lang-pane">
+      <div class="sub-tabs">
+        <button class="sub-btn active" onclick="subTab('py','py-basic',this)">Basic</button>
+        <button class="sub-btn"        onclick="subTab('py','py-methods',this)">Methods</button>
+        <button class="sub-btn"        onclick="subTab('py','py-blosc',this)">Blosc2</button>
+        <button class="sub-btn"        onclick="subTab('py','py-numpy',this)">NumPy</button>
+        <button class="sub-btn"        onclick="subTab('py','py-base64',this)">Base64 / Interop</button>
+      </div>
+
+      <div id="py-basic" class="sub-pane active">
+        <div class="code-wrap neo-in-lg"><pre><code><span class="kw">import</span> zmat
+
+<span class="cmt"># ── Compress / decompress (default: zlib) ───────────────────────</span>
+data       = <span class="fn">b</span><span class="str">"ZMat compression test data"</span> * <span class="num">1000</span>
+compressed = zmat.<span class="fn">compress</span>(data)
+restored   = zmat.<span class="fn">decompress</span>(compressed)
+<span class="kw">assert</span> restored == data
+
+<span class="fn">print</span>(<span class="fn">f</span><span class="str">f"Original: {len(data):,} B → Compressed: {len(compressed):,} B  "</span>
+      <span class="str">f"(ratio {len(compressed)/len(data):.3f})"</span>)
+
+<span class="cmt"># ── Compression level ───────────────────────────────────────────</span>
+<span class="cmt"># low-level zmat() call: iscompress=1 default, -N sets level</span>
+c_fast = zmat.<span class="fn">zmat</span>(data, iscompress=<span class="num">1</span>,  method=<span class="str">'zlib'</span>)   <span class="cmt"># default</span>
+c_max  = zmat.<span class="fn">zmat</span>(data, iscompress=<span class="num">-9</span>, method=<span class="str">'zlib'</span>)   <span class="cmt"># max</span>
+<span class="fn">print</span>(<span class="str">f"Level 1: {len(c_fast)} B  Level 9: {len(c_max)} B"</span>)
+
+<span class="cmt"># Both round-trip correctly</span>
+<span class="kw">assert</span> zmat.<span class="fn">decompress</span>(c_fast) == data
+<span class="kw">assert</span> zmat.<span class="fn">decompress</span>(c_max)  == data
+
+<span class="cmt"># ── bytearray input also works ──────────────────────────────────</span>
+buf = <span class="fn">bytearray</span>(b<span class="str">"buffered data"</span> * <span class="num">500</span>)
+<span class="kw">assert</span> zmat.<span class="fn">decompress</span>(zmat.<span class="fn">compress</span>(buf)) == <span class="fn">bytes</span>(buf)
+</code></pre></div>
+      </div>
+
+      <div id="py-methods" class="sub-pane">
+        <div class="code-wrap neo-in-lg"><pre><code><span class="kw">import</span> zmat, time
+
+data = <span class="fn">bytes</span>(<span class="fn">range</span>(<span class="num">256</span>)) * <span class="num">4000</span>   <span class="cmt"># ~1 MB, moderately compressible</span>
+
+methods = [<span class="str">'zlib'</span>, <span class="str">'gzip'</span>, <span class="str">'lzma'</span>, <span class="str">'lzip'</span>, <span class="str">'lz4'</span>, <span class="str">'lz4hc'</span>, <span class="str">'zstd'</span>]
+
+<span class="fn">print</span>(<span class="fn">f</span><span class="str">"{'Method':<10} {'Size':>8}  {'Ratio':>6}  {'Comp':>8}  {'Decomp':>8}"</span>)
+<span class="fn">print</span>(<span class="str">"-"</span> * <span class="num">50</span>)
+
+<span class="kw">for</span> m <span class="kw">in</span> methods:
+    t0 = time.<span class="fn">perf_counter</span>()
+    c  = zmat.<span class="fn">compress</span>(data, method=m)
+    tc = time.<span class="fn">perf_counter</span>() - t0
+
+    t0 = time.<span class="fn">perf_counter</span>()
+    d  = zmat.<span class="fn">decompress</span>(c, method=m)
+    td = time.<span class="fn">perf_counter</span>() - t0
+
+    <span class="kw">assert</span> d == data, <span class="fn">f</span><span class="str">f"{m} round-trip failed!"</span>
+    <span class="fn">print</span>(<span class="fn">f</span><span class="str">f"{m:<10} {len(c):>8}  {len(c)/len(data):>6.3f}  {tc:>7.4f}s  {td:>7.4f}s"</span>)
+
+<span class="cmt"># ── Method names are case-insensitive ───────────────────────────</span>
+c1 = zmat.<span class="fn">compress</span>(data, method=<span class="str">'ZLIB'</span>)
+c2 = zmat.<span class="fn">compress</span>(data, method=<span class="str">'zlib'</span>)
+<span class="kw">assert</span> c1 == c2
+</code></pre></div>
+      </div>
+
+      <div id="py-blosc" class="sub-pane">
+        <div class="code-wrap neo-in-lg"><pre><code><span class="kw">import</span> zmat
+
+<span class="cmt"># ── Blosc2 meta-compressor (ideal for numeric arrays) ───────────</span>
+<span class="kw">import</span> struct
+<span class="cmt"># Simulate a 3-D uint16 volume (128×128×64)</span>
+vol = <span class="fn">bytes</span>(<span class="fn">range</span>(<span class="num">256</span>)) * (<span class="num">128</span>*<span class="num">128</span>*<span class="num">64</span> * <span class="num">2</span> // <span class="num">256</span>)
+
+<span class="cmt"># All five blosc2 variants</span>
+<span class="kw">for</span> m <span class="kw">in</span> [<span class="str">'blosc2blosclz'</span>,<span class="str">'blosc2lz4'</span>,<span class="str">'blosc2lz4hc'</span>,<span class="str">'blosc2zlib'</span>,<span class="str">'blosc2zstd'</span>]:
+    c = zmat.<span class="fn">compress</span>(vol, method=m)
+    d = zmat.<span class="fn">decompress</span>(c, method=m)
+    <span class="kw">assert</span> d == vol
+    <span class="fn">print</span>(<span class="fn">f</span><span class="str">f"{m:<18}  {len(c):>8} B  ratio={len(c)/len(vol):.3f}"</span>)
+
+<span class="cmt"># ── Advanced: multi-threading + byte-shuffle ────────────────────</span>
+<span class="cmt"># typesize=2 → uint16 elements; shuffle=1 → byte-shuffle filter</span>
+c_adv = zmat.<span class="fn">zmat</span>(vol, iscompress=<span class="num">-6</span>, method=<span class="str">'blosc2zstd'</span>,
+                  nthread=<span class="num">4</span>, shuffle=<span class="num">1</span>, typesize=<span class="num">2</span>)
+d_adv = zmat.<span class="fn">zmat</span>(c_adv, iscompress=<span class="num">0</span>, method=<span class="str">'blosc2zstd'</span>)
+<span class="kw">assert</span> d_adv == vol
+<span class="fn">print</span>(<span class="fn">f</span><span class="str">f"Advanced blosc2zstd: {len(c_adv)} B"</span>)
+</code></pre></div>
+      </div>
+
+      <div id="py-numpy" class="sub-pane">
+        <div class="code-wrap neo-in-lg"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> zmat
+
+<span class="cmt"># ── Compress / restore a NumPy array ────────────────────────────</span>
+arr = np.<span class="fn">random</span>.<span class="fn">rand</span>(<span class="num">1000</span>, <span class="num">1000</span>)           <span class="cmt"># 8 MB float64</span>
+raw = arr.<span class="fn">tobytes</span>()                          <span class="cmt"># zmat works on bytes</span>
+
+c = zmat.<span class="fn">compress</span>(raw, method=<span class="str">'lz4'</span>)
+<span class="fn">print</span>(<span class="str">f"lz4: {len(raw):,} → {len(c):,} B"</span>)
+
+restored = np.<span class="fn">frombuffer</span>(
+    zmat.<span class="fn">decompress</span>(c, method=<span class="str">'lz4'</span>),
+    dtype=arr.dtype
+).<span class="fn">reshape</span>(arr.shape)
+<span class="kw">assert</span> np.<span class="fn">array_equal</span>(arr, restored)
+
+<span class="cmt"># ── Blosc2 + shuffle for integer arrays ─────────────────────────</span>
+vol   = np.<span class="fn">arange</span>(<span class="num">128</span>*<span class="num">128</span>*<span class="num">64</span>, dtype=np.uint16).<span class="fn">reshape</span>(<span class="num">128</span>,<span class="num">128</span>,<span class="num">64</span>)
+cbest = zmat.<span class="fn">zmat</span>(vol.<span class="fn">tobytes</span>(), iscompress=<span class="num">1</span>, method=<span class="str">'blosc2zstd'</span>,
+                  typesize=<span class="num">2</span>, shuffle=<span class="num">1</span>)    <span class="cmt"># typesize = itemsize</span>
+dbest = zmat.<span class="fn">zmat</span>(cbest, iscompress=<span class="num">0</span>, method=<span class="str">'blosc2zstd'</span>)
+vrest = np.<span class="fn">frombuffer</span>(dbest, dtype=np.uint16).<span class="fn">reshape</span>(vol.shape)
+<span class="kw">assert</span> np.<span class="fn">array_equal</span>(vol, vrest)
+
+<span class="cmt"># ── Structured dtype round-trip ─────────────────────────────────</span>
+dt  = np.<span class="fn">dtype</span>([(<span class="str">'x'</span>, np.float32), (<span class="str">'y'</span>, np.float32), (<span class="str">'z'</span>, np.float32)])
+pts = np.<span class="fn">zeros</span>(<span class="num">100000</span>, dtype=dt)
+c2  = zmat.<span class="fn">compress</span>(pts.<span class="fn">tobytes</span>(), method=<span class="str">'zstd'</span>)
+<span class="fn">print</span>(<span class="str">f"Struct array: {pts.nbytes:,} → {len(c2):,} B"</span>)
+</code></pre></div>
+      </div>
+
+      <div id="py-base64" class="sub-pane">
+        <div class="code-wrap neo-in-lg"><pre><code><span class="kw">import</span> zmat, zlib, gzip, base64, io
+
+<span class="cmt"># ── Base64 encode / decode ──────────────────────────────────────</span>
+data    = b<span class="str">"ZMat Python base64 test"</span>
+encoded = zmat.<span class="fn">encode</span>(data, method=<span class="str">'base64'</span>)
+decoded = zmat.<span class="fn">decode</span>(encoded, method=<span class="str">'base64'</span>)
+<span class="kw">assert</span> decoded == data
+
+<span class="cmt"># zmat base64 matches Python stdlib (strip newlines for comparison)</span>
+<span class="kw">assert</span> encoded.<span class="fn">replace</span>(b<span class="str">'\n'</span>, b<span class="str">''</span>) == base64.<span class="fn">b64encode</span>(data)
+
+<span class="cmt"># Chain: compress → base64  (useful for JSON / XML embedding)</span>
+payload = b<span class="str">"scientific data"</span> * <span class="num">5000</span>
+c   = zmat.<span class="fn">compress</span>(payload, method=<span class="str">'zlib'</span>)
+b64 = zmat.<span class="fn">encode</span>(c, method=<span class="str">'base64'</span>)
+<span class="fn">print</span>(<span class="str">f"base64 string: {len(b64)} chars"</span>)
+
+<span class="cmt"># Reverse</span>
+c2  = zmat.<span class="fn">decode</span>(b64, method=<span class="str">'base64'</span>)
+out = zmat.<span class="fn">decompress</span>(c2, method=<span class="str">'zlib'</span>)
+<span class="kw">assert</span> out == payload
+
+<span class="cmt"># ── stdlib interoperability ─────────────────────────────────────</span>
+text = b<span class="str">"interoperability test"</span> * <span class="num">500</span>
+
+<span class="cmt"># zmat zlib ↔ Python zlib</span>
+<span class="kw">assert</span> zlib.<span class="fn">decompress</span>(zmat.<span class="fn">compress</span>(text, method=<span class="str">'zlib'</span>)) == text
+<span class="kw">assert</span> zmat.<span class="fn">decompress</span>(zlib.<span class="fn">compress</span>(text), method=<span class="str">'zlib'</span>)  == text
+
+<span class="cmt"># zmat gzip ↔ Python gzip</span>
+cg = zmat.<span class="fn">compress</span>(text, method=<span class="str">'gzip'</span>)
+<span class="kw">with</span> gzip.<span class="fn">open</span>(io.<span class="fn">BytesIO</span>(cg), <span class="str">'rb'</span>) <span class="kw">as</span> f:
+    <span class="kw">assert</span> f.<span class="fn">read</span>() == text
+</code></pre></div>
+      </div>
+    </div><!-- /lang-py -->
+
+    <!-- ── C / Fortran pane ── -->
+    <div id="lang-c" class="lang-pane">
+      <div class="sub-tabs">
+        <button class="sub-btn active" onclick="subTab('c','c-basic',this)">C API</button>
+        <button class="sub-btn"        onclick="subTab('c','c-fort',this)">Fortran90</button>
+        <button class="sub-btn"        onclick="subTab('c','c-build',this)">Build</button>
+      </div>
+
+      <div id="c-basic" class="sub-pane active">
+        <div class="code-wrap neo-in-lg"><pre><code><span class="cmt">/* test_zmat.c – compress and decompress with libzmat */</span>
+<span class="kw">#include</span> <span class="str">"zmatlib.h"</span>
+<span class="kw">#include</span> &lt;stdio.h&gt;
+<span class="kw">#include</span> &lt;string.h&gt;
+<span class="kw">#include</span> &lt;stdlib.h&gt;
+
+<span class="kw">int</span> <span class="fn">main</span>() {
+    <span class="kw">unsigned char</span> input[] = <span class="str">"ZMat C compression example"</span>;
+    size_t inputsize = strlen((<span class="kw">char</span>*)input);
+    <span class="kw">unsigned char</span> *output  = NULL;
+    <span class="kw">unsigned char</span> *decoded = NULL;
+    size_t outputsize = <span class="num">0</span>, decodedsize = <span class="num">0</span>;
+    <span class="kw">int</span>    status    = <span class="num">0</span>;
+
+    <span class="cmt">/* zipid: 0=zlib 1=gzip 3=lzma 5=lz4 7=zstd 8-12=blosc2* */</span>
+    <span class="cmt">/* clevel: -1 to -9 to set level;  0 = decompress          */</span>
+    <span class="fn">zmat_run</span>(inputsize, input, &amp;outputsize, &amp;output, <span class="num">0</span>, &amp;status, <span class="num">-6</span>);
+    printf(<span class="str">"Compressed  : %zu → %zu bytes\n"</span>, inputsize, outputsize);
+
+    <span class="fn">zmat_run</span>(outputsize, output, &amp;decodedsize, &amp;decoded, <span class="num">0</span>, &amp;status, <span class="num">0</span>);
+    printf(<span class="str">"Decompressed: %s\n"</span>, decoded);
+
+    free(output);
+    free(decoded);
+    <span class="kw">return</span> <span class="num">0</span>;
+}
+</code></pre></div>
+      </div>
+
+      <div id="c-fort" class="sub-pane">
+        <div class="code-wrap neo-in-lg"><pre><code><span class="cmt">! test_zmat.f90 – Fortran90 binding via zmat_module</span>
+program zmat_demo
+    use iso_c_binding
+    use zmat_module
+    implicit none
+
+    character(len=<span class="num">40</span>)         :: input_str = <span class="str">"ZMat Fortran demo"</span>
+    integer(c_size_t)          :: input_len, output_len, decoded_len
+    integer(c_int)             :: zipid, status, clevel
+    type(c_ptr)                :: out_ptr, dec_ptr
+    character(kind=c_char), pointer :: out_arr(:), dec_arr(:)
+    integer :: i
+
+    input_len = len_trim(input_str)
+    zipid  = <span class="num">0</span>    <span class="cmt">! 0=zlib, 5=lz4, 7=zstd …</span>
+    clevel = <span class="num">-6</span>   <span class="cmt">! compression level</span>
+
+    <span class="cmt">! Compress</span>
+    call <span class="fn">zmat_run</span>(input_len, input_str, output_len, out_ptr, zipid, status, clevel)
+    call c_f_pointer(out_ptr, out_arr, [output_len])
+    print *, <span class="str">"Compressed:"</span>, input_len, <span class="str">"→"</span>, output_len, <span class="str">"bytes"</span>
+
+    <span class="cmt">! Decompress (clevel=0)</span>
+    call <span class="fn">zmat_run</span>(output_len, out_arr, decoded_len, dec_ptr, zipid, status, <span class="num">0</span>)
+    call c_f_pointer(dec_ptr, dec_arr, [decoded_len])
+    print *, <span class="str">"Decompressed:"</span>, (dec_arr(i), i=<span class="num">1</span>,decoded_len)
+end program zmat_demo
+</code></pre></div>
+      </div>
+
+      <div id="c-build" class="sub-pane">
+        <div class="build-note">
+          <h4>GCC / Clang</h4>
+          <div class="code-wrap neo-in-lg" style="margin-top:8px"><pre><code>gcc -o test_zmat test_zmat.c -I../include -L../lib -lzmat -lpthread -lm</code></pre></div>
+        </div>
+        <div class="build-note" style="margin-top:14px">
+          <h4>CMake</h4>
+          <div class="code-wrap neo-in-lg" style="margin-top:8px"><pre><code>cmake_minimum_required(VERSION <span class="num">3.3</span>)
+project(zmat_example C)
+
+find_library(ZMAT_LIB zmat PATHS ../lib)
+add_executable(test_zmat test_zmat.c)
+target_include_directories(test_zmat PRIVATE ../include)
+target_link_libraries(test_zmat ${ZMAT_LIB} pthread m)</code></pre></div>
+        </div>
+        <div class="build-note" style="margin-top:14px">
+          <h4>Fortran</h4>
+          <div class="code-wrap neo-in-lg" style="margin-top:8px"><pre><code>gfortran -o test_zmat test_zmat.f90 zmat_fortran.f90 \
+    -I../include -L../lib -lzmat -lpthread -lm</code></pre></div>
+        </div>
+      </div>
+    </div><!-- /lang-c -->
+
+  </div>
+</section>
+
+<!-- ════════════════════ API REFERENCE ════════════════════ -->
+<section id="functions">
+  <div class="section-content">
+    <h2 class="section-title">API Reference</h2>
+    <p class="section-sub">Consistent interface across all languages</p>
+    <div class="api-grid">
+
+      <div class="api-card neo">
+        <h3>MATLAB / Octave</h3>
+        <span class="lang-label lbl-mat">zmat.m / zipmat.mex</span>
+        <ul class="fn-list">
+          <li><code>zmat(data)</code><span class="fn-desc">compress with default zlib</span></li>
+          <li><code>zmat(data, 1, method)</code><span class="fn-desc">compress with named codec</span></li>
+          <li><code>zmat(data, -N, method)</code><span class="fn-desc">compress at level N (1–9)</span></li>
+          <li><code>zmat(data, 0, method)</code><span class="fn-desc">decompress</span></li>
+          <li><code>zmat(data, info)</code><span class="fn-desc">decompress &amp; restore type/size</span></li>
+          <li><code>[out, info] = zmat(…)</code><span class="fn-desc">info carries type, size, method</span></li>
+          <li><code>zmat(…, 'nthread', N)</code><span class="fn-desc">blosc2 thread count</span></li>
+          <li><code>zmat(…, 'typesize', B)</code><span class="fn-desc">bytes per element (shuffle)</span></li>
+        </ul>
+      </div>
+
+      <div class="api-card neo">
+        <h3>Python</h3>
+        <span class="lang-label lbl-py">import zmat</span>
+        <ul class="fn-list">
+          <li><code>zmat.compress(data, method, level)</code><span class="fn-desc">compress bytes / bytearray</span></li>
+          <li><code>zmat.decompress(data, method)</code><span class="fn-desc">decompress bytes</span></li>
+          <li><code>zmat.encode(data, method)</code><span class="fn-desc">encode (e.g. base64)</span></li>
+          <li><code>zmat.decode(data, method)</code><span class="fn-desc">decode</span></li>
+          <li><code>zmat.zmat(data, iscompress, method,</code><br>
+              <code>&nbsp;&nbsp;nthread, shuffle, typesize)</code>
+              <span class="fn-desc">low-level full-control interface</span></li>
+        </ul>
+      </div>
+
+      <div class="api-card neo">
+        <h3>C Library</h3>
+        <span class="lang-label lbl-c">zmatlib.h</span>
+        <ul class="fn-list">
+          <li><code>zmat_run(insize, in, &amp;outsize, &amp;out,</code><br>
+              <code>&nbsp;&nbsp;zipid, &amp;status, clevel)</code>
+              <span class="fn-desc">main compress / decompress call</span></li>
+          <li><code>zmat_encode(…)</code><span class="fn-desc">compress wrapper</span></li>
+          <li><code>zmat_decode(…)</code><span class="fn-desc">decompress wrapper</span></li>
+        </ul>
+      </div>
+
+      <div class="api-card neo">
+        <h3>Codec Names</h3>
+        <span class="lang-label lbl-c">zipid (C) / method (MATLAB &amp; Python)</span>
+        <ul class="fn-list">
+          <li><code>0 / 'zlib'</code><span class="fn-desc">zlib/zip (default)</span></li>
+          <li><code>1 / 'gzip'</code><span class="fn-desc">gzip format</span></li>
+          <li><code>2 / 'base64'</code><span class="fn-desc">base64 encoding</span></li>
+          <li><code>3 / 'lzma'</code><span class="fn-desc">LZMA</span></li>
+          <li><code>4 / 'lzip'</code><span class="fn-desc">lzip format</span></li>
+          <li><code>5 / 'lz4'</code><span class="fn-desc">LZ4 fast</span></li>
+          <li><code>6 / 'lz4hc'</code><span class="fn-desc">LZ4 high compression</span></li>
+          <li><code>7 / 'zstd'</code><span class="fn-desc">Zstandard</span></li>
+          <li><code>8–12 / 'blosc2*'</code><span class="fn-desc">blosclz, lz4, lz4hc, zlib, zstd</span></li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ INSTALLATION ════════════════════ -->
+<section id="installation">
+  <div class="section-content">
+    <h2 class="section-title">Installation</h2>
+    <p class="section-sub">Pick your platform and language</p>
+    <div class="install-grid">
+
+      <div class="install-card neo">
+        <h3>🐍 Python — PyPI</h3>
+        <p>Zero dependencies. Wheels for Linux, macOS, Windows.</p>
+        <div class="code-sm">pip install zmat</div>
+        <p style="margin-top:10px">Build from source:</p>
+        <div class="code-sm">git clone https://github.com/NeuroJSON/zmat.git
+cd zmat/python &amp;&amp; pip install .</div>
+      </div>
+
+      <div class="install-card neo">
+        <h3>📐 MATLAB / Octave — Manual</h3>
+        <p>Download ZIP, then add to path:</p>
+        <div class="code-sm">addpath('/path/to/zmat');
+rehash;</div>
+        <p style="margin-top:8px; font-size:12px; color:var(--muted)">Pre-compiled MEX files included for Win/Linux/macOS</p>
+      </div>
+
+      <div class="install-card neo">
+        <h3>🐧 Debian / Ubuntu</h3>
+        <p>Install from package manager:</p>
+        <div class="code-sm">sudo apt-get install octave-zmat matlab-zmat
+<span class="cmt"># C library + headers</span>
+sudo apt-get install libzmat1 libzmat1-dev</div>
+      </div>
+
+      <div class="install-card neo">
+        <h3>🎩 Fedora</h3>
+        <div class="code-sm">sudo dnf install octave-zmat
+<span class="cmt"># C library</span>
+sudo dnf install zmat zmat-devel zmat-static</div>
+      </div>
+
+      <div class="install-card neo">
+        <h3>🔧 From Source (MEX)</h3>
+        <div class="code-sm">git clone https://github.com/NeuroJSON/zmat.git
+cd zmat/src
+make mex   <span class="cmt"># MATLAB</span>
+make oct   <span class="cmt"># Octave</span></div>
+      </div>
+
+      <div class="install-card neo">
+        <h3>🏗️ CMake</h3>
+        <div class="code-sm">cd zmat/src
+mkdir build &amp;&amp; cd build
+cmake ../
+make</div>
+        <p style="margin-top:8px; font-size:12px; color:var(--muted)">Builds libzmat.a + zipmat.mex automatically</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ DOWNLOAD ════════════════════ -->
+<section id="download">
+  <div class="section-content" style="text-align:center">
+    <h2 class="section-title">Ready to Compress?</h2>
+    <p class="section-sub">Fast · Portable · Zero dependencies</p>
+    <div class="dl-stats">
+      <div>
+        <div class="dl-stat-num">1.0.0</div>
+        <div class="dl-stat-lbl">Current Version</div>
+      </div>
+      <div>
+        <div class="dl-stat-num">12</div>
+        <div class="dl-stat-lbl">Codecs Built-in</div>
+      </div>
+      <div>
+        <div class="dl-stat-num">3</div>
+        <div class="dl-stat-lbl">Language Bindings</div>
+      </div>
+    </div>
+    <div class="dl-btns">
+      <a href="https://github.com/NeuroJSON/zmat/releases" class="btn-dl-primary">Download Latest Release</a>
+      <a href="https://pypi.org/project/zmat/" class="btn-dl-primary">PyPI Package</a>
+      <a href="https://github.com/NeuroJSON/zmat" class="btn-dl-ghost">GitHub Repository</a>
+    </div>
+    <p style="margin-top:48px; color:rgba(255,255,255,.7); font-size:13px">Supported by NIH Grant U24-NS124027 &nbsp;·&nbsp; GPL v3 License</p>
+    <p style="margin-top:8px; color:rgba(255,255,255,.6); font-size:12px">Copyright © 2019–2026 Qianqian Fang &lt;q.fang@neu.edu&gt;</p>
+  </div>
+</section>
+
+</div><!-- /slider-container -->
+
+<script>
+/* ── scroll ── */
+function gotoSection(id) {
+  const sc = document.getElementById('sc');
+  const el = document.getElementById(id);
+  if (sc && el) sc.scrollTop = el.offsetTop;
+}
+
+/* ── hero tabs ── */
+function heroTab(id, btn) {
+  document.querySelectorAll('.hero-pane-content').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.hero-tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── language toggle ── */
+function langSwitch(lang, btn) {
+  document.querySelectorAll('.lang-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('lang-' + lang).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── sub-tabs per language ── */
+function subTab(lang, id, btn) {
+  const pane = document.getElementById('lang-' + lang);
+  pane.querySelectorAll('.sub-pane').forEach(p => p.classList.remove('active'));
+  pane.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── nav active highlight on scroll ── */
+const sc   = document.getElementById('sc');
+const secs = document.querySelectorAll('section');
+const links = document.querySelectorAll('.nav-links a');
+sc.addEventListener('scroll', () => {
+  let cur = '';
+  secs.forEach(s => { if (sc.scrollTop >= s.offsetTop - 120) cur = s.id; });
+  links.forEach(a => {
+    const fn = a.getAttribute('onclick') || '';
+    a.classList.toggle('active', cur !== '' && fn.includes("'" + cur + "'"));
+  });
+});
+</script>
+</body>
+</html>

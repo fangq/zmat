@@ -7,7 +7,7 @@
 PKGNAME=zmat
 LIBNAME=lib$(PKGNAME)
 MEXNAME=zipmat
-VERSION=0.9.9
+VERSION=1.0.0
 SOURCE=src
 EXAMPLE=example/c
 

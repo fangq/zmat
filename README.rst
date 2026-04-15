@@ -4,9 +4,9 @@
 ZMAT: A portable C-library and MATLAB/Octave toolbox for zlib/gzip/lzma/lz4/zstd/blosc2 data compression
 ##############################################################################
 
-* Copyright (C) 2019-2023  Qianqian Fang <q.fang at neu.edu>
+* Copyright (C) 2019-2026  Qianqian Fang <q.fang at neu.edu>
 * License: GNU General Public License version 3 (GPL v3), see License*.txt
-* Version: 0.9.9 (Foxy the Fantastic Mr. Fox - RC1)
+* Version: 1.0.0 (Foxy the Fantastic Mr. Fox)
 * URL: https://github.com/NeuroJSON/zmat
 * Acknowledgement: This project is part of the `NeuroJSON project <https://neurojson.org>`_
   supported by US National Institute of Health (NIH)
@@ -42,7 +42,7 @@ levels. We understand there are many other existing general purpose data
 compression algorithms. We prioritize the support of these compression
 algorithms because they have widespread use.
 
-Starting in v0.9.9, we added support to a high-performance meta-compressor,
+Starting in v1.0.0, we added support to a high-performance meta-compressor,
 called ``blosc2`` (https://blosc.org). The ``blosc2`` compressor is not single
 compression method, but a container format that supports a diverse set of 
 strategies to losslessly compress data, especially optimized for storing and
@@ -448,9 +448,10 @@ Acknowledgement
 
 ZMat is linked against the below open-source data compression libraries
 
-1. ZLib library: https://www.zlib.net/
-  *  Copyright (C) 1995-2017 Jean-loup Gailly and Mark Adler
-  *  License: Zlib license
+1. miniz: https://github.com/richgel999/miniz
+  *  Copyright (c) 2013-2014 RAD Game Tools and Valve Software
+  *  Copyright (c) 2010-2014 Rich Geldreich and Tenacious Software LLC
+  *  License: MIT License (https://github.com/richgel999/miniz/blob/master/LICENSE)
 2. Eazylzma: https://github.com/lloyd/easylzma
   *  Author: Lloyd Hilaiel (lloyd)
   *  License: public domain
@@ -467,7 +468,4 @@ ZMat is linked against the below open-source data compression libraries
 6. ZStd: https://facebook.github.io/zstd/
   *  Copyright (c) Meta Platforms, Inc. and affiliates. All rights reserved.
   *  License: BSD 3-Clause License (http://www.opensource.org/licenses/bsd-license.php)
-7. miniz: https://github.com/richgel999/miniz
-  *  Copyright (c) 2013-2014 RAD Game Tools and Valve Software
-  *  Copyright (c) 2010-2014 Rich Geldreich and Tenacious Software LLC
-  *  License: MIT License (https://github.com/richgel999/miniz/blob/master/LICENSE)
+
