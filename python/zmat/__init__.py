@@ -26,6 +26,7 @@ from _zmat import zmat as _zmat_c
 
 __all__ = ["compress", "decompress", "encode", "decode", "zmat"]
 
+__version__ = "1.0.2"
 
 def compress(data, method="zlib", level=1, info=False):
     """Compress *data* using the requested algorithm.

@@ -187,6 +187,17 @@ jobs:
         uses: matlab-actions/setup-matlab@v2
         with:
           release: R2023b
+      - name: Build .mltbx package
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
+        uses: matlab-actions/run-command@v2
+        with:
+          command: matlab.addons.toolbox.packageToolbox('zmat.prj')
+      - name: Upload mltbx artifact
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: zmat-mltbx-github-latest
+          path: zmat.mltbx
       - name: Install msys2 libraries (Windows only)
         if: ${{ runner.os == 'Windows' }}
         uses: msys2/setup-msys2@v2
@@ -247,17 +258,6 @@ jobs:
         with:
           name: all-zmat-matlab-${{ env.RELEASE_TAG }}
           path: packages/zmat-matlab-${{ env.RELEASE_TAG }}.zip
-      - name: Build .mltbx package
-        if: ${{ matrix.os == 'ubuntu-22.04' }}
-        uses: matlab-actions/run-command@v2
-        with:
-          command: matlab.addons.toolbox.packageToolbox('zmat.prj')
-      - name: Upload mltbx artifact
-        if: ${{ matrix.os == 'ubuntu-22.04' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: zmat-mltbx-github-latest
-          path: zmat.mltbx
 
   upload_package:
     name: Upload Packages
