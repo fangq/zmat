@@ -1,5 +1,45 @@
 = Change Log =
 
+== ZMAT 1.0.0 (Foxy the Fantastic Mr. Fox), FangQ <q.fang (a) neu.edu> ==
+
+AI coding assistant Claude has been used in the development of this release.
+
+ 2026-04-15 [1954707] [mex] add Linux mex binaries
+ 2026-04-15 [1558336]*[doc] bump version to 1.0, add webpage
+ 2026-04-12 [4310bb1] [macos] allow .mex for octave run older octave
+ 2026-04-11 [5e079a0] [deploy] macos build still hardcode liboctmex full path
+ 2026-04-11 [42518ff] [deploy] remove absolute path to liboctmex.1 on mac
+ 2026-04-11 [41812bb] [ci] statically link gcc on macos, python build show dylib
+ 2026-04-11 [03e0efc] [test] print benchmark output
+ 2026-04-10 [c1eb247] [deploy] build zmat with static gcc
+ 2026-04-10 [9fa6f02] [ci] fix windows python build
+ 2026-04-10 [343e4fb] [bug] add missing header file
+ 2026-04-10 [b993b31]*[blosc2] update blosc2 to 2.23.1, zstd to 1.5.7
+ 2026-04-10 [92fa19c]*[miniz] update miniz to v3.1.1
+ 2026-04-10 [99d1ddb] [lz4] update lz4 to 1.10.0
+ 2026-04-10 [2c40056] [mex] update linux mex files
+ 2026-03-07 [aea6ad4] [ci] bump python version to 0.9.10 to use latest package
+ 2026-03-07 [6ad3773] [ci] add the missing README, update setup.py to use manylinux
+ 2026-03-07 [4f85fba] [doc] add README for python module
+ 2026-03-07 [f05e962]*[feat] support special matrices in octave 10+
+ 2026-03-07 [b440935] [bug] fix various python module building issues
+ 2026-03-07 [9dde248]*[feat] add python binding
+ 2026-03-07 [a3e9ddb] [ci] fix MW_MINGW64_LOC again
+ 2026-03-06 [baeccf5] [blosc] automatically detect sse2 on apple silicon
+ 2026-03-05 [a986c56]*fix safety, memory, and efficiency issues throughout zmatlib.c
+ 2025-09-21 [1b2cb0f] [ci] update all retired runners
+ 2025-01-18 [6f92b49] [feat] allow to build with miniz without lzma
+ 2024-09-14 [c6a6ce1] [ci] disable upx on macos
+ 2024-08-18 [26b1147] [example] revert sample code back to zlib from lzma test
+ 2024-08-18 [7c3b09b] [deploy] update all build-in mex files after fixing #11
+ 2024-08-18 [ca52abd] [ci] fix github macos-12 runner gcc version
+ 2024-08-18 [66c8e88] [bug] fix memory leakage lloyd/easylzma#4 and lloyd/easylzma#7, close #11
+ 2024-07-18 [d756c37] [ci] debug ubuntu 24.04 octave-dev installation
+ 2024-07-18 [6149af3] [ci] add ubuntu 24.04
+ 2024-06-14 [980b445] [mac] add arm64 apple silicon precompiled mex files
+ 2024-03-30 [b810d29] [package] remove cmake cache file found by debian packaging
+
+
 == ZMAT 0.9.9 (Foxy the Fantastic Mr. Fox - RC1), FangQ <q.fang (a) neu.edu> ==
 
  2023-10-22 [c79f969] use valgrind to test memory error on Linux,run example scripts

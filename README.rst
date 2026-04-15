@@ -1,7 +1,7 @@
 .. image:: https://neurojson.org/wiki/upload/neurojson_banner_long.png
 
-##############################################################################                                                      
-ZMAT: A portable C-library and MATLAB/Octave toolbox for zlib/gzip/lzma/lz4/zstd/blosc2 data compression
+##############################################################################
+ZMAT: A portable C-library and MATLAB/Octave/Python toolbox for zlib/gzip/lzma/lz4/zstd/blosc2 data compression
 ##############################################################################
 
 * Copyright (C) 2019-2026  Qianqian Fang <q.fang at neu.edu>
@@ -9,12 +9,25 @@ ZMAT: A portable C-library and MATLAB/Octave toolbox for zlib/gzip/lzma/lz4/zstd
 * Version: 1.0.0 (Foxy the Fantastic Mr. Fox)
 * URL: https://neurojson.org/zmat
 * Github: https://github.com/NeuroJSON/zmat
+* Pypi: https://pypi.org/project/zmat
 * Acknowledgement: This project is part of the `NeuroJSON project <https://neurojson.org>`_
   supported by US National Institute of Health (NIH)
   grant `U24-NS124027 <https://reporter.nih.gov/project-details/10308329>`_
 
 .. image:: https://github.com/NeuroJSON/zmat/actions/workflows/run_test.yml/badge.svg
     :target: https://github.com/NeuroJSON/zmat/actions/workflows/run_test.yml
+
+.. image:: https://github.com/NeuroJSON/zmat/actions/workflows/build_linux_wheel.yml/badge.svg
+    :target: https://github.com/NeuroJSON/zmat/actions/workflows/build_linux_wheel.yml
+
+.. image:: https://github.com/NeuroJSON/zmat/actions/workflows/build_macos_wheel.yml/badge.svg
+    :target: https://github.com/NeuroJSON/zmat/actions/workflows/build_macos_wheel.yml
+
+.. image:: https://github.com/NeuroJSON/zmat/actions/workflows/build_windows_wheel.yml/badge.svg
+    :target: https://github.com/NeuroJSON/zmat/actions/workflows/build_windows_wheel.yml
+
+.. image:: https://img.shields.io/pypi/v/zmat
+    :target: https://pypi.org/project/zmat/
 
 #################
 Table of Contents
@@ -24,14 +37,48 @@ Table of Contents
   :depth: 3
 
 ============
+What's New
+============
+
+----------------------------------------
+ZMat 1.0.0 (Foxy the Fantastic Mr. Fox)
+----------------------------------------
+
+* **Python module** — ZMat is now available as a Python C extension (``pip install zmat``),
+  with pre-built wheels for Linux, macOS, and Windows. The Python API supports all
+  compression/encoding algorithms available in the MATLAB/Octave toolbox.
+
+* **Octave 10+ compatibility** — special matrices (e.g., logical, complex) are now
+  correctly handled in GNU Octave 10 and later.
+
+* **Apple Silicon support** — the blosc2 backend now automatically detects SSE2
+  availability on Apple Silicon (M-series) Macs.
+
+* **Updated bundled libraries**:
+
+  - `C-Blosc2 <https://blosc.org>`_ updated to v2.23.1
+  - `Zstandard <https://facebook.github.io/zstd/>`_ updated to v1.5.7
+  - `miniz <https://github.com/richgel999/miniz>`_ updated to v3.1.1
+  - `LZ4 <https://lz4.github.io/lz4/>`_ updated to v1.10.0
+
+* **New Linux MEX binaries** — pre-compiled MEX files for Linux are now
+  included in the ``private`` folder alongside the existing macOS and Windows binaries.
+
+* **Memory and safety fixes** — multiple safety, memory-leak, and efficiency
+  issues in ``zmatlib.c`` have been resolved.
+
+* AI coding assistant Claude has been used in the development of this release.
+
+============
 Introduction
 ============
 
-ZMat provides both an easy-to-use C-based data compression library - 
-``libzmat`` as well a portable mex function to enable ``zlib/gzip/lzma/lz4/zstd/blosc2``
-based data compression/decompression and ``base64`` encoding/decoding support 
-in MATLAB and GNU Octave. It is fast and compact, can process a 
-large array within a fraction of a second. 
+ZMat provides both an easy-to-use C-based data compression library -
+``libzmat``, a portable mex function to enable ``zlib/gzip/lzma/lz4/zstd/blosc2``
+based data compression/decompression and ``base64`` encoding/decoding support
+in MATLAB and GNU Octave, as well as a Python C extension module with the same
+feature set. It is fast and compact, can process a large array within a fraction
+of a second. 
 
 Among all the supported compression methods, or codecs, ``lz4`` is among the fastest for
 both compression/decompression; ``lzma`` is the slowest but offers the highest 
@@ -196,6 +243,135 @@ packages but one must first run
 
 to enable the `relevant PPA <http://https://launchpad.net/~fangq/+archive/ubuntu/ppa>`_
 (personal package achieve) first.
+
+================
+Installing ZMat for Python
+================
+
+The easiest way to install ZMat for Python is via ``pip``:
+
+.. code:: shell
+
+   pip install zmat
+
+To install from source, clone the repository and build the extension:
+
+.. code:: shell
+
+   git clone https://github.com/NeuroJSON/zmat.git
+   cd zmat/python
+   pip install .
+
+All compression libraries (miniz, easylzma, lz4, zstd, blosc2) are embedded
+in the source and compiled directly into the module — no system libraries are
+required. The build can be customized with the following environment variables:
+
++------------------------+----------+-------------------------------------------+
+| Variable               | Default  | Description                               |
++========================+==========+===========================================+
+| ``ZMAT_USE_SYSTEM_ZLIB=1`` | off | Link against system ``-lz`` instead of   |
+|                        |          | embedded miniz                            |
++------------------------+----------+-------------------------------------------+
+| ``ZMAT_NO_LZMA=1``     | off      | Disable lzma/lzip support                 |
++------------------------+----------+-------------------------------------------+
+| ``ZMAT_NO_LZ4=1``      | off      | Disable lz4/lz4hc support                |
++------------------------+----------+-------------------------------------------+
+| ``ZMAT_NO_ZSTD=1``     | off      | Disable zstd support                      |
++------------------------+----------+-------------------------------------------+
+| ``ZMAT_NO_BLOSC2=1``   | off      | Disable blosc2 support                    |
++------------------------+----------+-------------------------------------------+
+
+For example, to build without blosc2 for a smaller binary:
+
+.. code:: shell
+
+   ZMAT_NO_BLOSC2=1 pip install .
+
+================
+Using ZMat in Python
+================
+
+.. code-block:: python
+
+   import zmat
+
+   # Compress and decompress using the default algorithm (zlib)
+   data = b"Hello, ZMat! " * 1000
+   compressed = zmat.compress(data)
+   print(f"Original: {len(data)} bytes -> Compressed: {len(compressed)} bytes")
+
+   restored = zmat.decompress(compressed)
+   assert restored == data
+
+   # Use a different algorithm
+   fast      = zmat.compress(data, method='lz4')    # fastest
+   small     = zmat.compress(data, method='lzma')   # smallest
+   balanced  = zmat.compress(data, method='zstd')   # good balance
+
+   # Base64 encoding / decoding
+   encoded = zmat.encode(data, method='base64')
+   decoded = zmat.decode(encoded, method='base64')
+   assert decoded == data
+
+The four main API functions are:
+
+* ``zmat.compress(data, method='zlib', level=1)`` — compress a bytes-like object
+* ``zmat.decompress(data, method='zlib')`` — decompress a bytes-like object
+* ``zmat.encode(data, method='base64')`` — encode data (e.g., base64)
+* ``zmat.decode(data, method='base64')`` — decode data (e.g., base64)
+
+All functions accept ``bytes``, ``bytearray``, or any object supporting
+Python's buffer protocol (including NumPy arrays).
+
+ZMat's zlib and gzip output is fully compatible with Python's standard library:
+
+.. code-block:: python
+
+   import zmat, zlib, gzip, io
+
+   data = b"interoperability test " * 100
+
+   # zmat -> Python zlib
+   assert zlib.decompress(zmat.compress(data, method='zlib')) == data
+
+   # Python zlib -> zmat
+   assert zmat.decompress(zlib.compress(data), method='zlib') == data
+
+   # zmat -> Python gzip
+   compressed = zmat.compress(data, method='gzip')
+   with gzip.open(io.BytesIO(compressed), 'rb') as f:
+       assert f.read() == data
+
+For numerical arrays, blosc2 methods with byte-shuffle can achieve better
+compression ratios:
+
+.. code-block:: python
+
+   import numpy as np
+   import zmat
+
+   arr = np.random.rand(1000, 1000)
+
+   # Basic round-trip with lz4
+   compressed = zmat.compress(arr.tobytes(), method='lz4')
+   restored = np.frombuffer(zmat.decompress(compressed, method='lz4'),
+                            dtype=arr.dtype).reshape(arr.shape)
+   assert np.array_equal(arr, restored)
+
+   # blosc2 with byte-shuffle (typesize=8 for float64)
+   compressed = zmat.zmat(arr.tobytes(), iscompress=1,
+                          method='blosc2zstd', typesize=8)
+
+The low-level ``zmat.zmat()`` interface provides full control over blosc2
+multi-threading and shuffle options:
+
+.. code-block:: python
+
+   output = zmat.zmat(data, iscompress=1, method='blosc2zstd',
+                      nthread=4, shuffle=1, typesize=8)
+
+``iscompress=1`` compresses at the default level; ``iscompress=0``
+decompresses; a negative value (e.g., ``-9``) sets the compression level.
 
 ================
 Using ZMat in MATLAB
@@ -380,7 +556,7 @@ if MATLAB was not installed in a standard path, you may change ``cmake ../`` to
 
 .. code-block:: shell
 
-      cmake Matlab_ROOT_DIR=/path/to/matlab/root ../
+      cmake -DMatlab_ROOT_DIR=/path/to/matlab/root ../
 
 by default, this will first compile ``libzmat.a`` and then create the ``.mex`` file 
 that is statically linked with ``libzmat.a``. If one prefers to create a dynamic
@@ -389,7 +565,7 @@ be done by
 
 .. code-block:: shell
 
-      cmake Matlab_ROOT_DIR=/path/to/matlab/root -DSTATIC_LIB=off ../
+      cmake -DMatlab_ROOT_DIR=/path/to/matlab/root -DSTATIC_LIB=off ../
 
 
 3. Method 3: please open a terminal, and run the below shall commands
@@ -403,7 +579,7 @@ be done by
 to create the mex file for MATLAB, and run ``make clean oct`` to compile
 the mex file for Octave. 
 
-The compilex mex files are named as ``zipmat.mex*`` under the zmat root folder.
+The compiled mex files are named as ``zipmat.mex*`` under the zmat root folder.
 One may move those into the ``private`` folder to overwrite the existing files,
 or leave them in the root folder. MATLAB/Octave will use these files when 
 ``zmat`` is called.

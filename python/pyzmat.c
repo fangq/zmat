@@ -495,7 +495,7 @@ static struct PyModuleDef zmatmodule = {
     "ZMat - A portable data compression/decompression module\n\n"
     "Supports: zlib, gzip, lzma, lzip, lz4, lz4hc, zstd, blosc2, base64\n\n"
     "Part of the NeuroJSON project (https://neurojson.org)\n"
-    "More information: https://github.com/NeuroJSON/zmat\n",
+    "More information: https://neurojson.org/zmat\n",
     -1,
     ZmatMethods
 };
