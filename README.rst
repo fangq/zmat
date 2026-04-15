@@ -7,7 +7,8 @@ ZMAT: A portable C-library and MATLAB/Octave toolbox for zlib/gzip/lzma/lz4/zstd
 * Copyright (C) 2019-2026  Qianqian Fang <q.fang at neu.edu>
 * License: GNU General Public License version 3 (GPL v3), see License*.txt
 * Version: 1.0.0 (Foxy the Fantastic Mr. Fox)
-* URL: https://github.com/NeuroJSON/zmat
+* URL: https://neurojson.org/zmat
+* Github: https://github.com/NeuroJSON/zmat
 * Acknowledgement: This project is part of the `NeuroJSON project <https://neurojson.org>`_
   supported by US National Institute of Health (NIH)
   grant `U24-NS124027 <https://reporter.nih.gov/project-details/10308329>`_
@@ -42,7 +43,7 @@ levels. We understand there are many other existing general purpose data
 compression algorithms. We prioritize the support of these compression
 algorithms because they have widespread use.
 
-Starting in v1.0.0, we added support to a high-performance meta-compressor,
+Starting in v0.9.9, we added support to a high-performance meta-compressor,
 called ``blosc2`` (https://blosc.org). The ``blosc2`` compressor is not single
 compression method, but a container format that supports a diverse set of 
 strategies to losslessly compress data, especially optimized for storing and
