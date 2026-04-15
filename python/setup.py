@@ -285,6 +285,10 @@ zmat_ext = Extension(
     language="c",
 )
 
+# Ensure package_dir resolves correctly relative to setup.py's own directory,
+# regardless of what CWD was restored to after ensure_csrc().
+os.chdir(here)
+
 setup(
     ext_modules=[zmat_ext],
     packages=["zmat"],
