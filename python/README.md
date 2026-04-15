@@ -169,13 +169,57 @@ with gzip.open(io.BytesIO(compressed), 'rb') as f:
 
 ## Working with NumPy Arrays
 
-ZMat accepts any object supporting Python's buffer protocol, including
-NumPy arrays:
+### Array-aware round-trip with `info` (recommended)
+
+Pass `info=True` to `compress()` to capture the array's dtype, shape, and
+memory order alongside the compressed bytes.  Pass the returned dict to
+`decompress()` to restore the original array exactly — no manual bookkeeping
+needed.  This mirrors the `[ss, info] = zmat(eye(5))` / `zmat(ss, info)` pattern
+from the MATLAB/Octave toolbox.
 
 ```python
 import numpy as np
 import zmat
 
+arr = np.random.rand(1000, 1000)          # float64, C-contiguous
+
+# compress — capture metadata
+compressed, info = zmat.compress(arr, method='lz4', info=True)
+print(info)
+# {'type': 'float64', 'shape': (1000, 1000), 'byte': 8, 'method': 'lz4', 'order': 'C'}
+
+# decompress — restored to original dtype and shape
+restored = zmat.decompress(compressed, info=info)
+assert isinstance(restored, np.ndarray)
+assert restored.dtype == arr.dtype
+assert restored.shape == arr.shape
+assert np.array_equal(restored, arr)
+```
+
+Fortran-contiguous arrays are round-tripped correctly too:
+
+```python
+arr_f = np.asfortranarray(np.eye(100))
+compressed, info = zmat.compress(arr_f, info=True)
+restored = zmat.decompress(compressed, info=info)
+assert restored.flags['F_CONTIGUOUS']
+```
+
+The `info` dict keys mirror the MATLAB `info` struct:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `type` | `str` | NumPy dtype string, e.g. `'float64'` |
+| `shape` | `tuple` | Array dimensions |
+| `byte` | `int` | Bytes per element (`arr.itemsize`) |
+| `method` | `str` | Compression method used |
+| `order` | `str` | `'F'` for Fortran-contiguous, `'C'` otherwise |
+
+### Manual round-trip
+
+For cases where you manage metadata yourself:
+
+```python
 arr = np.random.rand(1000, 1000)
 compressed = zmat.compress(arr.tobytes(), method='lz4')
 restored = np.frombuffer(zmat.decompress(compressed, method='lz4'),

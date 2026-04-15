@@ -63,7 +63,9 @@ def ensure_csrc():
             if os.path.exists(dst_path):
                 shutil.rmtree(dst_path)
             shutil.copytree(
-                src_path, dst_path, ignore=shutil.ignore_patterns("*.o", "*.a", "*.S", "*.s")
+                src_path,
+                dst_path,
+                ignore=shutil.ignore_patterns("*.o", "*.a", "*.S", "*.s"),
             )
 
 
@@ -137,11 +139,26 @@ if use_lzma:
     easylzma_dir = os.path.join(srcdir, "easylzma")
     pavlov_dir = os.path.join(easylzma_dir, "pavlov")
     include_dirs.extend([easylzma_dir, pavlov_dir])
-    for f in ["compress", "decompress", "lzma_header", "lzip_header", "common_internal"]:
+    for f in [
+        "compress",
+        "decompress",
+        "lzma_header",
+        "lzip_header",
+        "common_internal",
+    ]:
         p = os.path.join(easylzma_dir, f + ".c")
         if _exists(p):
             sources.append(p)
-    for f in ["LzmaEnc", "LzmaDec", "LzmaLib", "LzFind", "Bra", "BraIA64", "Alloc", "7zCrc"]:
+    for f in [
+        "LzmaEnc",
+        "LzmaDec",
+        "LzmaLib",
+        "LzFind",
+        "Bra",
+        "BraIA64",
+        "Alloc",
+        "7zCrc",
+    ]:
         p = os.path.join(pavlov_dir, f + ".c")
         if _exists(p):
             sources.append(p)
@@ -257,7 +274,7 @@ else:
 
 # ---------- define the extension ----------
 zmat_ext = Extension(
-    name="zmat",
+    name="_zmat",
     sources=sources,
     include_dirs=include_dirs,
     define_macros=define_macros,
@@ -270,4 +287,6 @@ zmat_ext = Extension(
 
 setup(
     ext_modules=[zmat_ext],
+    packages=["zmat"],
+    package_dir={"zmat": "zmat"},
 )

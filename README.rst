@@ -342,25 +342,41 @@ ZMat's zlib and gzip output is fully compatible with Python's standard library:
    with gzip.open(io.BytesIO(compressed), 'rb') as f:
        assert f.read() == data
 
-For numerical arrays, blosc2 methods with byte-shuffle can achieve better
-compression ratios:
+ZMat can capture a NumPy array's dtype, shape, and memory order alongside the
+compressed bytes, so the original array is restored automatically on
+decompression. This mirrors the ``[ss, info] = zmat(arr)`` /
+``zmat(ss, info)`` pattern from the MATLAB/Octave toolbox:
 
 .. code-block:: python
 
    import numpy as np
    import zmat
 
-   arr = np.random.rand(1000, 1000)
+   arr = np.random.rand(1000, 1000)   # float64, C-contiguous
 
-   # Basic round-trip with lz4
-   compressed = zmat.compress(arr.tobytes(), method='lz4')
-   restored = np.frombuffer(zmat.decompress(compressed, method='lz4'),
-                            dtype=arr.dtype).reshape(arr.shape)
-   assert np.array_equal(arr, restored)
+   # compress — capture metadata
+   compressed, info = zmat.compress(arr, method='lz4', info=True)
+   # info: {'type': 'float64', 'shape': (1000, 1000), 'byte': 8,
+   #        'method': 'lz4', 'order': 'C'}
+
+   # decompress — restored to original dtype and shape
+   restored = zmat.decompress(compressed, info=info)
+   assert np.array_equal(restored, arr)
+
+   # Fortran-contiguous arrays are handled correctly too
+   arr_f = np.asfortranarray(np.eye(100))
+   compressed, info = zmat.compress(arr_f, info=True)
+   restored = zmat.decompress(compressed, info=info)
+   assert restored.flags['F_CONTIGUOUS']
+
+For numerical arrays, blosc2 methods with byte-shuffle can achieve
+better compression ratios:
+
+.. code-block:: python
 
    # blosc2 with byte-shuffle (typesize=8 for float64)
-   compressed = zmat.zmat(arr.tobytes(), iscompress=1,
-                          method='blosc2zstd', typesize=8)
+   compressed, info = zmat.compress(arr, method='blosc2zstd', info=True)
+   restored = zmat.decompress(compressed, info=info)
 
 The low-level ``zmat.zmat()`` interface provides full control over blosc2
 multi-threading and shuffle options:

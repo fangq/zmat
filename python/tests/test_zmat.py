@@ -21,7 +21,9 @@ class TestZmatBasic(unittest.TestCase):
 
     def test_compress_decompress_bytes(self):
         """Test zlib round-trip on simple byte data."""
-        data = b"\x01\x00\x00\x00\x00" * 5 + b"\x00\x01\x00\x00\x00" * 5  # like eye(5) uint8
+        data = (
+            b"\x01\x00\x00\x00\x00" * 5 + b"\x00\x01\x00\x00\x00" * 5
+        )  # like eye(5) uint8
         compressed = zmat.compress(data)
         self.assertIsInstance(compressed, bytes)
         self.assertGreater(len(compressed), 0)
@@ -307,7 +309,9 @@ class TestZmatLargeData(unittest.TestCase):
         """Create an n×n identity matrix as packed doubles."""
         rows = []
         for i in range(n):
-            row = b"\x00" * (8 * i) + struct.pack("<d", 1.0) + b"\x00" * (8 * (n - i - 1))
+            row = (
+                b"\x00" * (8 * i) + struct.pack("<d", 1.0) + b"\x00" * (8 * (n - i - 1))
+            )
             rows.append(row)
         return b"".join(rows)
 
@@ -320,7 +324,9 @@ class TestZmatLargeData(unittest.TestCase):
         data = b"\x00" * (500 * 500 * 8)  # 500x500 doubles
         for method in ["zlib", "gzip", "lz4", "lzma", "zstd", "blosc2blosclz"]:
             compressed = zmat.compress(data, method=method)
-            self.assertLess(len(compressed), len(data), f"{method} did not compress zeros")
+            self.assertLess(
+                len(compressed), len(data), f"{method} did not compress zeros"
+            )
             decompressed = zmat.decompress(compressed, method=method)
             self.assertEqual(decompressed, data, f"{method} round-trip failed on zeros")
 
@@ -330,7 +336,9 @@ class TestZmatLargeData(unittest.TestCase):
         for method in ["zlib", "gzip", "lz4", "lz4hc", "zstd", "blosc2lz4"]:
             compressed = zmat.compress(data, method=method)
             decompressed = zmat.decompress(compressed, method=method)
-            self.assertEqual(decompressed, data, f"{method} round-trip failed on eye(500)")
+            self.assertEqual(
+                decompressed, data, f"{method} round-trip failed on eye(500)"
+            )
 
     def test_large_sequential(self):
         """Test compression of sequential data (like magic(500))."""
@@ -338,7 +346,9 @@ class TestZmatLargeData(unittest.TestCase):
         for method in ["zlib", "gzip", "lz4", "lzma", "zstd", "blosc2zstd"]:
             compressed = zmat.compress(data, method=method)
             decompressed = zmat.decompress(compressed, method=method)
-            self.assertEqual(decompressed, data, f"{method} round-trip failed on sequential data")
+            self.assertEqual(
+                decompressed, data, f"{method} round-trip failed on sequential data"
+            )
 
 
 class TestZmatBytearray(unittest.TestCase):
@@ -424,6 +434,199 @@ class TestZmatInterop(unittest.TestCase):
         self.assertEqual(zmat_clean, py_encoded)
 
 
+class TestZmatNumpyInfo(unittest.TestCase):
+    """Tests for numpy array round-trip via the info dict mechanism.
+
+    Mirrors the MATLAB pattern:
+        [ss, info] = zmat(eye(5))
+        orig = zmat(ss, info)
+    """
+
+    def setUp(self):
+        try:
+            import numpy as np  # noqa: F401
+        except ImportError:
+            self.skipTest("numpy not installed")
+
+    # ------------------------------------------------------------------
+    # compress() return-value shape
+    # ------------------------------------------------------------------
+
+    def test_info_false_returns_plain_bytes(self):
+        """compress() with info=False (default) returns bytes, not a tuple."""
+        import numpy as np
+
+        arr = np.eye(5)
+        result = zmat.compress(arr.tobytes(), method="zlib")
+        self.assertIsInstance(result, bytes)
+
+    def test_info_true_returns_tuple(self):
+        """compress(arr, info=True) returns (bytes, dict) for an ndarray."""
+        import numpy as np
+
+        arr = np.eye(5)
+        result = zmat.compress(arr, info=True)
+        self.assertIsInstance(result, tuple)
+        self.assertEqual(len(result), 2)
+        compressed, info = result
+        self.assertIsInstance(compressed, bytes)
+        self.assertIsInstance(info, dict)
+
+    def test_info_true_non_ndarray_returns_tuple_with_none(self):
+        """compress(bytes, info=True) returns (bytes, None) — not an error."""
+        data = b"plain bytes data" * 100
+        result = zmat.compress(data, info=True)
+        self.assertIsInstance(result, tuple)
+        compressed, info = result
+        self.assertIsInstance(compressed, bytes)
+        self.assertIsNone(info)
+
+    # ------------------------------------------------------------------
+    # info dict contents
+    # ------------------------------------------------------------------
+
+    def test_info_dict_fields(self):
+        """info dict contains the expected keys with correct values."""
+        import numpy as np
+
+        arr = np.zeros((3, 4, 5), dtype=np.float32)
+        _, info = zmat.compress(arr, method="lz4", info=True)
+
+        self.assertEqual(info["type"], "float32")
+        self.assertEqual(info["shape"], (3, 4, 5))
+        self.assertEqual(info["byte"], 4)  # float32 = 4 bytes per element
+        self.assertEqual(info["method"], "lz4")
+        self.assertEqual(info["order"], "C")
+
+    def test_info_dict_fortran_order(self):
+        """order='F' is recorded for Fortran-contiguous arrays."""
+        import numpy as np
+
+        arr = np.asfortranarray(np.ones((6, 7), dtype=np.float64))
+        _, info = zmat.compress(arr, info=True)
+        self.assertEqual(info["order"], "F")
+
+    def test_info_method_precedence_over_kwarg(self):
+        """Method stored in info takes precedence over the method= kwarg."""
+        import numpy as np
+
+        arr = np.arange(100, dtype=np.float64)
+        compressed, info = zmat.compress(arr, method="lz4", info=True)
+        # passing a different method kwarg should be silently overridden
+        restored = zmat.decompress(compressed, method="zlib", info=info)
+        np.testing.assert_array_equal(restored, arr)
+
+    # ------------------------------------------------------------------
+    # round-trip correctness across dtypes and shapes
+    # ------------------------------------------------------------------
+
+    def _round_trip(self, arr, method="zlib"):
+        import numpy as np
+
+        compressed, info = zmat.compress(arr, method=method, info=True)
+        restored = zmat.decompress(compressed, info=info)
+        self.assertIsInstance(restored, type(arr))
+        self.assertEqual(restored.dtype, arr.dtype)
+        self.assertEqual(restored.shape, arr.shape)
+        np.testing.assert_array_equal(restored, arr)
+
+    def test_float64_2d(self):
+        """eye(5) as float64 — the canonical MATLAB example."""
+        import numpy as np
+
+        self._round_trip(np.eye(5))
+
+    def test_float32_2d(self):
+        import numpy as np
+
+        self._round_trip(np.eye(10, dtype=np.float32))
+
+    def test_int32_1d(self):
+        import numpy as np
+
+        self._round_trip(np.arange(1000, dtype=np.int32))
+
+    def test_uint8_1d(self):
+        import numpy as np
+
+        self._round_trip(np.array([0, 1, 127, 128, 255], dtype=np.uint8))
+
+    def test_complex128(self):
+        import numpy as np
+
+        arr = np.array([1 + 2j, 3 + 4j, 5 + 6j], dtype=np.complex128)
+        self._round_trip(arr)
+
+    def test_bool_array(self):
+        import numpy as np
+
+        arr = np.array([True, False, True, True, False], dtype=bool)
+        self._round_trip(arr)
+
+    def test_3d_array(self):
+        import numpy as np
+
+        arr = np.arange(60, dtype=np.float64).reshape(3, 4, 5)
+        self._round_trip(arr)
+
+    def test_fortran_order_preserved(self):
+        """Fortran-contiguous arrays are restored in F order."""
+        import numpy as np
+
+        arr = np.asfortranarray(np.random.rand(8, 12))
+        compressed, info = zmat.compress(arr, info=True)
+        restored = zmat.decompress(compressed, info=info)
+        self.assertTrue(
+            restored.flags["F_CONTIGUOUS"],
+            "restored array should be Fortran-contiguous",
+        )
+        np.testing.assert_array_equal(restored, arr)
+
+    def test_all_methods(self):
+        """Round-trip through every supported method."""
+        import numpy as np
+
+        arr = np.arange(256, dtype=np.float32).reshape(16, 16)
+        methods = [
+            "zlib",
+            "gzip",
+            "lzma",
+            "lzip",
+            "lz4",
+            "lz4hc",
+            "zstd",
+            "blosc2blosclz",
+            "blosc2lz4",
+            "blosc2lz4hc",
+            "blosc2zlib",
+            "blosc2zstd",
+        ]
+        for m in methods:
+            with self.subTest(method=m):
+                self._round_trip(arr, method=m)
+
+    def test_returned_array_is_writable(self):
+        """decompress with info must return a writable array."""
+        import numpy as np
+
+        arr = np.zeros(10, dtype=np.float64)
+        compressed, info = zmat.compress(arr, info=True)
+        restored = zmat.decompress(compressed, info=info)
+        self.assertTrue(restored.flags["WRITEABLE"])
+        restored[0] = 99.0  # must not raise
+
+    def test_empty_array(self):
+        """Zero-element arrays round-trip cleanly."""
+        import numpy as np
+
+        arr = np.array([], dtype=np.float64)
+        compressed, info = zmat.compress(arr, info=True)
+        self.assertEqual(info["shape"], (0,))
+        restored = zmat.decompress(compressed, info=info)
+        self.assertEqual(restored.shape, (0,))
+        self.assertEqual(restored.dtype, arr.dtype)
+
+
 class TestZmatBenchmark(unittest.TestCase):
     """Simple benchmark tests (mirrors zmat_speedbench.m).
     These verify correctness rather than enforcing timing thresholds."""
@@ -440,7 +643,9 @@ class TestZmatBenchmark(unittest.TestCase):
         decompressed = zmat.decompress(compressed, method=method)
         t_decompress = time.perf_counter() - t0
 
-        self.assertEqual(decompressed, data, f"Benchmark round-trip failed for {method}")
+        self.assertEqual(
+            decompressed, data, f"Benchmark round-trip failed for {method}"
+        )
 
         return {
             "method": method,
@@ -456,7 +661,9 @@ class TestZmatBenchmark(unittest.TestCase):
         n = self.BENCH_SIZE
         data = b""
         for i in range(n):
-            row = b"\x00" * (8 * i) + struct.pack("<d", 1.0) + b"\x00" * (8 * (n - i - 1))
+            row = (
+                b"\x00" * (8 * i) + struct.pack("<d", 1.0) + b"\x00" * (8 * (n - i - 1))
+            )
             data += row
 
         methods = [
@@ -472,7 +679,9 @@ class TestZmatBenchmark(unittest.TestCase):
             "blosc2zlib",
             "blosc2zstd",
         ]
-        print(f"\n{'Method':<16} {'Size':>8} {'Ratio':>8} {'Comp(s)':>10} {'Decomp(s)':>10}")
+        print(
+            f"\n{'Method':<16} {'Size':>8} {'Ratio':>8} {'Comp(s)':>10} {'Decomp(s)':>10}"
+        )
         print("-" * 56)
         for m in methods:
             r = self._benchmark_method(data, m)
@@ -498,7 +707,9 @@ class TestZmatBenchmark(unittest.TestCase):
             "blosc2zlib",
             "blosc2zstd",
         ]
-        print(f"\n{'Method':<16} {'Size':>8} {'Ratio':>8} {'Comp(s)':>10} {'Decomp(s)':>10}")
+        print(
+            f"\n{'Method':<16} {'Size':>8} {'Ratio':>8} {'Comp(s)':>10} {'Decomp(s)':>10}"
+        )
         print("-" * 56)
         for m in methods:
             r = self._benchmark_method(data, m)

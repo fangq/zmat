@@ -468,7 +468,7 @@
       <div class="feat-card neo">
         <div class="feat-icon">🔀</div>
         <h3>Type Preservation</h3>
-        <p>MATLAB <code>info</code> struct restores original array type and dimensions.</p>
+        <p>MATLAB <code>info</code> struct and Python <code>info=True</code> flag restore the original array dtype, shape, and memory order after decompression.</p>
       </div>
     </div>
   </div>
@@ -601,6 +601,7 @@ orig = <span class="fn">zmat</span>(raw, info);
         <button class="sub-btn"        onclick="subTab('py','py-methods',this)">Methods</button>
         <button class="sub-btn"        onclick="subTab('py','py-blosc',this)">Blosc2</button>
         <button class="sub-btn"        onclick="subTab('py','py-numpy',this)">NumPy</button>
+        <button class="sub-btn"        onclick="subTab('py','py-arrayinfo',this)">Array Info</button>
         <button class="sub-btn"        onclick="subTab('py','py-base64',this)">Base64 / Interop</button>
       </div>
 
@@ -716,6 +717,56 @@ dt  = np.<span class="fn">dtype</span>([(<span class="str">'x'</span>, np.float3
 pts = np.<span class="fn">zeros</span>(<span class="num">100000</span>, dtype=dt)
 c2  = zmat.<span class="fn">compress</span>(pts.<span class="fn">tobytes</span>(), method=<span class="str">'zstd'</span>)
 <span class="fn">print</span>(<span class="str">f"Struct array: {pts.nbytes:,} → {len(c2):,} B"</span>)
+</code></pre></div>
+      </div>
+
+      <div id="py-arrayinfo" class="sub-pane">
+        <div class="code-wrap neo-in-lg"><pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> zmat
+
+<span class="cmt"># ── Array-info round-trip (mirrors MATLAB [ss,info]=zmat / zmat(ss,info)) ─</span>
+arr = np.<span class="fn">eye</span>(<span class="num">5</span>)                      <span class="cmt"># float64, 5×5 identity</span>
+
+<span class="cmt"># compress — capture dtype, shape, order alongside the bytes</span>
+compressed, info = zmat.<span class="fn">compress</span>(arr, info=<span class="kw">True</span>)
+<span class="fn">print</span>(info)
+<span class="cmt"># {'type': 'float64', 'shape': (5, 5), 'byte': 8, 'method': 'zlib', 'order': 'C'}</span>
+
+<span class="cmt"># decompress — array is fully restored: dtype, shape, values</span>
+restored = zmat.<span class="fn">decompress</span>(compressed, info=info)
+<span class="kw">assert</span> <span class="fn">isinstance</span>(restored, np.ndarray)
+<span class="kw">assert</span> restored.dtype == arr.dtype
+<span class="kw">assert</span> restored.shape == arr.shape
+<span class="kw">assert</span> np.<span class="fn">array_equal</span>(restored, arr)
+
+<span class="cmt"># ── Any dtype, any shape ─────────────────────────────────────────</span>
+img = np.<span class="fn">random</span>.<span class="fn">randint</span>(<span class="num">0</span>, <span class="num">255</span>, (<span class="num">256</span>, <span class="num">256</span>, <span class="num">3</span>), dtype=np.uint8)
+c_img, i_img = zmat.<span class="fn">compress</span>(img, method=<span class="str">'lz4'</span>, info=<span class="kw">True</span>)
+r_img = zmat.<span class="fn">decompress</span>(c_img, info=i_img)   <span class="cmt"># uint8 256×256×3 restored</span>
+<span class="kw">assert</span> np.<span class="fn">array_equal</span>(r_img, img)
+
+vol = np.<span class="fn">arange</span>(<span class="num">128</span>*<span class="num">128</span>*<span class="num">64</span>, dtype=np.uint16).<span class="fn">reshape</span>(<span class="num">128</span>, <span class="num">128</span>, <span class="num">64</span>)
+c_vol, i_vol = zmat.<span class="fn">compress</span>(vol, method=<span class="str">'zstd'</span>, info=<span class="kw">True</span>)
+r_vol = zmat.<span class="fn">decompress</span>(c_vol, info=i_vol)   <span class="cmt"># uint16 128×128×64 restored</span>
+<span class="kw">assert</span> np.<span class="fn">array_equal</span>(r_vol, vol)
+
+<span class="cmt"># ── Fortran-order arrays are preserved ───────────────────────────</span>
+arr_f = np.<span class="fn">asfortranarray</span>(np.<span class="fn">eye</span>(<span class="num">100</span>))
+c_f, i_f = zmat.<span class="fn">compress</span>(arr_f, info=<span class="kw">True</span>)
+r_f = zmat.<span class="fn">decompress</span>(c_f, info=i_f)
+<span class="kw">assert</span> r_f.flags[<span class="str">'F_CONTIGUOUS'</span>]         <span class="cmt"># memory order restored</span>
+<span class="kw">assert</span> np.<span class="fn">array_equal</span>(r_f, arr_f)
+
+<span class="cmt"># ── info dict fields (mirrors MATLAB info struct) ────────────────</span>
+<span class="cmt">#   'type'   → numpy dtype string, e.g. 'float64'</span>
+<span class="cmt">#   'shape'  → tuple of dimensions</span>
+<span class="cmt">#   'byte'   → bytes per element  (arr.itemsize)</span>
+<span class="cmt">#   'method' → compression method used</span>
+<span class="cmt">#   'order'  → 'F' for Fortran-contiguous, 'C' otherwise</span>
+
+<span class="cmt"># ── non-ndarray input: returns (bytes, None) ────────────────────</span>
+c_raw, info_none = zmat.<span class="fn">compress</span>(b<span class="str">"plain bytes"</span> * <span class="num">100</span>, info=<span class="kw">True</span>)
+<span class="kw">assert</span> info_none <span class="kw">is</span> <span class="kw">None</span>                    <span class="cmt"># no metadata for plain bytes</span>
 </code></pre></div>
       </div>
 
@@ -879,7 +930,9 @@ target_link_libraries(test_zmat ${ZMAT_LIB} pthread m)</code></pre></div>
         <span class="lang-label lbl-py">import zmat</span>
         <ul class="fn-list">
           <li><code>zmat.compress(data, method, level)</code><span class="fn-desc">compress bytes / bytearray</span></li>
+          <li><code>zmat.compress(arr, info=True)</code><span class="fn-desc">compress ndarray → (bytes, info_dict)</span></li>
           <li><code>zmat.decompress(data, method)</code><span class="fn-desc">decompress bytes</span></li>
+          <li><code>zmat.decompress(data, info=info)</code><span class="fn-desc">decompress → original ndarray (dtype + shape restored)</span></li>
           <li><code>zmat.encode(data, method)</code><span class="fn-desc">encode (e.g. base64)</span></li>
           <li><code>zmat.decode(data, method)</code><span class="fn-desc">decode</span></li>
           <li><code>zmat.zmat(data, iscompress, method,</code><br>

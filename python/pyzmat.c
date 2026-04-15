@@ -112,7 +112,7 @@ static PyObject* pyzmat_zmat(PyObject* self, PyObject* args, PyObject* kwargs) {
 
     static char* kwlist[] = {"data", "iscompress", "method", "nthread", "shuffle", "typesize", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "y*|isi iii", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "y*|isiii", kwlist,
                                      &input_buf, &iscompress, &method,
                                      &nthread, &shuffle, &typesize)) {
         return NULL;
@@ -491,8 +491,8 @@ static PyMethodDef ZmatMethods[] = {
 /* Module definition */
 static struct PyModuleDef zmatmodule = {
     PyModuleDef_HEAD_INIT,
-    "zmat",
-    "ZMat - A portable data compression/decompression module\n\n"
+    "_zmat",
+    "ZMat C backend — use the 'zmat' package, not this module directly.\n\n"
     "Supports: zlib, gzip, lzma, lzip, lz4, lz4hc, zstd, blosc2, base64\n\n"
     "Part of the NeuroJSON project (https://neurojson.org)\n"
     "More information: https://neurojson.org/zmat\n",
@@ -501,6 +501,6 @@ static struct PyModuleDef zmatmodule = {
 };
 
 /* Module initialization */
-PyMODINIT_FUNC PyInit_zmat(void) {
+PyMODINIT_FUNC PyInit__zmat(void) {
     return PyModule_Create(&zmatmodule);
 }
