@@ -1,10 +1,20 @@
-# ZMat - A portable data compression/decompression library for Python
+![ZMat](https://neurojson.org/wiki/upload/neurojson_banner_long.png)
+
+# ZMat - A lightweight zlib/gzip/lzma/lz4/zstd/blosc2 compression/decompression library for Python
 
 ![Build Status](https://github.com/NeuroJSON/zmat/actions/workflows/build_linux_wheel.yml/badge.svg)
 ![Build Status](https://github.com/NeuroJSON/zmat/actions/workflows/build_macos_wheel.yml/badge.svg)
 ![Build Status](https://github.com/NeuroJSON/zmat/actions/workflows/build_windows_wheel.yml/badge.svg)
 [![PyPI](https://img.shields.io/pypi/v/zmat)](https://pypi.org/project/zmat/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+- Copyright (C) 2019-2026  Qianqian Fang <q.fang at neu.edu>
+- License: GNU General Public License version 3 (GPL v3), see License*.txt
+- Version: 1.0.0 (Foxy the Fantastic Mr. Fox)
+- URL: https://neurojson.org/zmat
+- Github: https://github.com/NeuroJSON/zmat
+- PyPi: https://pypi.org/project/zmat
+
 
 ZMat is a lightweight Python C extension for fast, in-memory data compression
 and decompression. It provides a unified interface to multiple compression
@@ -15,8 +25,6 @@ ZMat is part of the [NeuroJSON project](https://neurojson.org) and is supported
 by the US National Institute of Health (NIH) grant
 [U24-NS124027](https://reporter.nih.gov/project-details/10308329).
 
-- **GitHub**: https://github.com/NeuroJSON/zmat
-- **Documentation**: https://neurojson.org/Page/zmat
 
 ## Supported Algorithms
 
