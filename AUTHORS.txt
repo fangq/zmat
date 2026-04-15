@@ -8,19 +8,34 @@ Address: Dept. of Bioengineering
 URL: http://fanglab.org
 Email: <q.fang at neu.edu>
 
-ZMAT Website : https://github.com/NeuroJSON/zmat
+ZMAT Website : https://neurojson.org/zmat
+ZMAT PyPi: https://pypi.org/project/zmat
+ZMAT Github Repository : https://github.com/NeuroJSON/zmat
 
 
+ZMat bundles the below open-source data compression/encoding libraries
 
-The base64_{encode,decode} functions in the zmat.cpp functions were copied from
-http://web.mit.edu/freebsd/head/contrib/wpa/src/utils/base64.c
-http://web.mit.edu/freebsd/head/contrib/wpa/src/utils/base64.h
-written by Jouni Malinen <j@w1.fi> licensed under the BSD license
-
-
-The optional LZMA/LZIP compression support is provided by
-the EazyLZMA library written by Lloyd Hilaiel. EazyLZMA was
-built on Igor Pavlov's LZMA library (both previous works
-were released under the public domain)
-
-https://github.com/lloyd/easylzma
+1. miniz: https://github.com/richgel999/miniz
+  *  Copyright (c) 2013-2014 RAD Game Tools and Valve Software
+  *  Copyright (c) 2010-2014 Rich Geldreich and Tenacious Software LLC
+  *  License: MIT License (https://github.com/richgel999/miniz/blob/master/LICENSE)
+2. Eazylzma: https://github.com/lloyd/easylzma
+  *  Author: Lloyd Hilaiel (lloyd)
+  *  License: public domain
+3. Original LZMA library:
+  *  Author: Igor Pavlov
+  *  License: public domain
+4. LZ4 library: https://lz4.github.io/lz4/
+  *  Copyright (C) 2011-2019, Yann Collet.
+  *  License: BSD 2-Clause License (http://www.opensource.org/licenses/bsd-license.php)
+5. C-blosc2: https://blosc.org/
+  *  Copyright (c) 2009-2018 Francesc Alted <francesc@blosc.org>
+  *  Copyright (c) 2019-present The Blosc Development Team <blosc@blosc.org>
+  *  License: BSD 3-Clause License (http://www.opensource.org/licenses/bsd-license.php)
+6. ZStd: https://facebook.github.io/zstd/
+  *  Copyright (c) Meta Platforms, Inc. and affiliates. All rights reserved.
+  *  License: BSD 3-Clause License (http://www.opensource.org/licenses/bsd-license.php)
+7. base64_{encode,decode} functions in the zmat.cpp
+  *  Copyright (c) 2005, Jouni Malinen <j@w1.fi>
+  *  License: BSD 3-Clause License (http://www.opensource.org/licenses/bsd-license.php)
+  *  Source http://web.mit.edu/freebsd/head/contrib/wpa/src/utils/base64.c and base64.h

@@ -247,6 +247,17 @@ jobs:
         with:
           name: all-zmat-matlab-${{ env.RELEASE_TAG }}
           path: packages/zmat-matlab-${{ env.RELEASE_TAG }}.zip
+      - name: Build .mltbx package
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
+        uses: matlab-actions/run-command@v2
+        with:
+          command: matlab.addons.toolbox.packageToolbox('zmat.prj')
+      - name: Upload mltbx artifact
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: zmat-mltbx-github-latest
+          path: zmat.mltbx
 
   upload_package:
     name: Upload Packages
@@ -259,6 +270,11 @@ jobs:
         with:
           pattern: all-zmat*
           merge-multiple: true
+          path: packages
+      - name: Download mltbx
+        uses: actions/download-artifact@v4
+        with:
+          name: zmat-mltbx-github-latest
           path: packages
       - name: Create all-in-one zmat package
         run: |
@@ -278,4 +294,13 @@ jobs:
           username: ${{ secrets.MCX_SERVER_USER }}
           ssh_private_key: ${{ secrets.MCX_SERVER_SSH_KEY }}
           local_path: "packages/zmat-allinone-github-latest.zip"
+          remote_path: ${{ secrets.MCX_CI_PATH }}
+      - name: Copy mltbx to server
+        if: ${{ github.repository_owner == 'NeuroJSON' && github.event_name != 'pull_request'}}
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+          server: ${{ secrets.MCX_SERVER }}
+          username: ${{ secrets.MCX_SERVER_USER }}
+          ssh_private_key: ${{ secrets.MCX_SERVER_SSH_KEY }}
+          local_path: "packages/zmat.mltbx"
           remote_path: ${{ secrets.MCX_CI_PATH }}

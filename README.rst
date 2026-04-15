@@ -9,7 +9,7 @@ ZMAT: A portable C-library and MATLAB/Octave/Python toolbox for zlib/gzip/lzma/l
 * Version: 1.0.0 (Foxy the Fantastic Mr. Fox)
 * URL: https://neurojson.org/zmat
 * Github: https://github.com/NeuroJSON/zmat
-* Pypi: https://pypi.org/project/zmat
+* PyPi: https://pypi.org/project/zmat
 * Acknowledgement: This project is part of the `NeuroJSON project <https://neurojson.org>`_
   supported by US National Institute of Health (NIH)
   grant `U24-NS124027 <https://reporter.nih.gov/project-details/10308329>`_
@@ -639,7 +639,7 @@ forum to report any questions you may have regarding ZMat:
 Acknowledgement
 ==========================
 
-ZMat is linked against the below open-source data compression libraries
+ZMat bundles the below open-source data compression/encoding libraries
 
 1. miniz: https://github.com/richgel999/miniz
   *  Copyright (c) 2013-2014 RAD Game Tools and Valve Software
@@ -661,4 +661,7 @@ ZMat is linked against the below open-source data compression libraries
 6. ZStd: https://facebook.github.io/zstd/
   *  Copyright (c) Meta Platforms, Inc. and affiliates. All rights reserved.
   *  License: BSD 3-Clause License (http://www.opensource.org/licenses/bsd-license.php)
-
+7. base64_{encode,decode} functions in the zmat.cpp
+  *  Copyright (c) 2005, Jouni Malinen <j@w1.fi>
+  *  License: BSD 3-Clause License (http://www.opensource.org/licenses/bsd-license.php)
+  *  Source http://web.mit.edu/freebsd/head/contrib/wpa/src/utils/base64.c and base64.h

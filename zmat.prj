@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.toolbox" plugin-version="1.0">
-  <configuration build-checksum="2471735789" file="/home/fangq/space/git/Project/github/zmat/zmat.prj" location="/home/fangq/space/git/Project/github/zmat" name="zmat" target="target.toolbox" target-name="Package Toolbox">
+  <configuration build-checksum="2471735789" file="/drives/bixi1/users/fangq/git/Project/github/zmat/zmat.prj" location="/drives/bixi1/users/fangq/git/Project/github/zmat" name="zmat" target="target.toolbox" target-name="Package Toolbox">
     <param.appname>zmat</param.appname>
     <param.authnamewatermark>Qianqian Fang</param.authnamewatermark>
     <param.email>fangqq@gmail.com</param.email>
@@ -10,7 +10,7 @@ based data compression/decompression and base64 encoding/decoding support
 in MATLAB and GNU Octave. It is fast and compact, can process a large 
 array within a fraction of a second. Among the 6 supported compression 
 methods, lz4 is the fastest for compression/decompression; lzma is the 
-slowest but has the highest compression ratio; zlib/gzip have the best 
+slowest but has the highest compression ratio; zstd/zlib/gzip have the best 
 balance between speed and compression time.</param.description>
     <param.screenshot>${PROJECT_ROOT}/images/zmat_logo.png</param.screenshot>
     <param.version>1.0.0</param.version>
@@ -24,8 +24,24 @@ balance between speed and compression time.</param.description>
 include
 octave
 src
+python
+docs
+images
+lib
 .git*
-Makefile</param.exclude.filters>
+.github
+.claude
+.miss_hit
+Makefile
+*.prj
+*.mltbx
+*.sh
+patch.txt
+error_log.txt
+exported_symbols*.txt
+test.txt
+example/c
+example/f90</param.exclude.filters>
     <param.exclude.pcodedmfiles>true</param.exclude.pcodedmfiles>
     <param.examples />
     <param.demosxml />
@@ -53,6 +69,9 @@ Makefile</param.exclude.filters>
     <param.additional.sw.mac.url />
     <param.additional.sw.linux.url />
     <unset>
+      <param.authnamewatermark />
+      <param.email />
+      <param.company />
       <param.output />
       <param.products.name />
       <param.products.id />
@@ -102,11 +121,11 @@ Makefile</param.exclude.filters>
     <fileset.depfun.excluded />
     <fileset.package />
     <build-deliverables>
-      <file location="${PROJECT_ROOT}" name="zmat.mltbx" optional="false">/home/fangq/space/git/Project/github/zmat/zmat.mltbx</file>
+      <file location="${PROJECT_ROOT}" name="zmat.mltbx" optional="false">/drives/bixi1/users/fangq/git/Project/github/zmat/zmat.mltbx</file>
     </build-deliverables>
     <workflow />
     <matlab>
-      <root>/opt/MATLAB/R2024b</root>
+      <root>/pub/MATLAB/R2019b</root>
       <toolboxes>
         <toolbox name="matlabcoder" />
       </toolboxes>
@@ -125,7 +144,7 @@ Makefile</param.exclude.filters>
       <vista>false</vista>
       <linux>true</linux>
       <solaris>false</solaris>
-      <osver>6.8.0-106-generic</osver>
+      <osver>6.8.0-94-generic</osver>
       <os32>false</os32>
       <os64>true</os64>
       <arch>glnxa64</arch>
